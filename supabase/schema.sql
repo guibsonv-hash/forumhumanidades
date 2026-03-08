@@ -13,6 +13,10 @@ create table if not exists public.forum_registrations (
 
 alter table public.forum_registrations add column if not exists pair_group_id uuid;
 
+alter table public.forum_registrations add column if not exists partner_name text;
+alter table public.forum_registrations add column if not exists partner_classroom text;
+alter table public.forum_registrations add column if not exists partner_role text;
+
 create or replace function public.forum_allowed_roles(p_classroom text)
 returns text[]
 language sql
@@ -47,6 +51,36 @@ as $$
     when p_role = 'Deputado' then 'Assessor'
     else null
   end;
+$$;
+
+create or replace function public.forum_sync_partner_columns()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.forum_registrations f
+  set partner_name = p.student_name,
+      partner_classroom = p.classroom,
+      partner_role = p.role
+  from public.forum_registrations p
+  where f.pair_group_id is not null
+    and p.pair_group_id = f.pair_group_id
+    and p.id <> f.id;
+
+  update public.forum_registrations f
+  set partner_name = null,
+      partner_classroom = null,
+      partner_role = null
+  where f.pair_group_id is null
+     or not exists (
+       select 1
+       from public.forum_registrations p
+       where p.pair_group_id = f.pair_group_id
+         and p.id <> f.id
+     );
+end;
 $$;
 
 create or replace function public.app_get_status()
@@ -85,7 +119,10 @@ as $$
           'studentName', student_name,
           'email', email,
           'role', role,
-          'pairGroupId', pair_group_id
+          'pairGroupId', pair_group_id,
+          'partnerName', partner_name,
+          'partnerClassroom', partner_classroom,
+          'partnerRole', partner_role
         ) order by student_name
       )
       from public.forum_registrations
@@ -93,6 +130,8 @@ as $$
   );
 $$;
 
+drop function if exists public.app_new_registration(text, text, text, text);
+drop function if exists public.app_change_registration(text, text, text, text);
 create or replace function public.app_new_registration(
   p_classroom text,
   p_student_name text,
@@ -202,6 +241,8 @@ begin
     insert into public.forum_registrations (classroom, student_name, role, email, pair_group_id)
     values (v_partner_classroom, v_partner_student, v_partner_role, v_partner_email, v_pair_id);
   end if;
+
+  perform public.forum_sync_partner_columns();
 
   v_remaining := case when v_limit is null then null else greatest(v_limit - (v_used + 1), 0) end;
 
@@ -399,6 +440,8 @@ begin
     end if;
   end if;
 
+  perform public.forum_sync_partner_columns();
+
   v_remaining := case when v_limit is null then null else greatest(v_limit - (case when v_current.role = v_new_role then v_used else (v_used + 1) end), 0) end;
 
   return jsonb_build_object(
@@ -410,6 +453,8 @@ begin
 end;
 $$;
 
+select public.forum_sync_partner_columns();
+
 alter table public.forum_registrations enable row level security;
 
 revoke all on public.forum_registrations from anon, authenticated;
@@ -420,4 +465,11 @@ grant execute on function public.app_change_registration(text, text, text, text,
 grant execute on function public.forum_allowed_roles(text) to anon, authenticated;
 grant execute on function public.forum_role_limit(text) to anon, authenticated;
 grant execute on function public.forum_counterpart_role(text) to anon, authenticated;
+grant execute on function public.forum_sync_partner_columns() to anon, authenticated;
+
+
+
+
+
+
 
