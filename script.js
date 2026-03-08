@@ -1,11 +1,5 @@
-﻿const APP_PASSWORD = "univ@p.humanidades";
+const APP_PASSWORD = "univ@p.humanidades";
 const ROLE_ORDER = ["Assessor", "Deputado", "Imprensa", "Staff"];
-
-const config = window.APP_CONFIG || {};
-const hasSupabaseConfig = Boolean(config.SUPABASE_URL && config.SUPABASE_ANON_KEY);
-const supabase = hasSupabaseConfig
-  ? window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY)
-  : null;
 
 const accessScreen = document.getElementById("access-screen");
 const studentScreen = document.getElementById("student-screen");
@@ -50,9 +44,41 @@ let statusData = {
 let flowMode = null;
 let currentRegistration = null;
 let modalAfterCloseAction = null;
+let supabaseClient = null;
 
 function normalize(value) {
   return String(value || "").trim().toLocaleLowerCase("pt-BR");
+}
+
+function getSupabaseConfig() {
+  const raw = window.APP_CONFIG || {};
+
+  const url = String(raw.SUPABASE_URL || raw.supabaseUrl || window.SUPABASE_URL || "").trim();
+  const anonKey = String(raw.SUPABASE_ANON_KEY || raw.supabaseAnonKey || window.SUPABASE_ANON_KEY || "").trim();
+  const looksPlaceholder = url.includes("YOUR-PROJECT-REF") || anonKey.includes("YOUR_SUPABASE_ANON_KEY");
+
+  return {
+    url: looksPlaceholder ? "" : url,
+    anonKey: looksPlaceholder ? "" : anonKey,
+  };
+}
+
+function getSupabaseClient() {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  if (!window.supabase || typeof window.supabase.createClient !== "function") {
+    throw new Error("Biblioteca do Supabase não carregou. Verifique sua conexão e recarregue a página.");
+  }
+
+  const { url, anonKey } = getSupabaseConfig();
+  if (!url || !anonKey) {
+    throw new Error("Configuração do Supabase ausente. Preencha SUPABASE_URL e SUPABASE_ANON_KEY em config.js.");
+  }
+
+  supabaseClient = window.supabase.createClient(url, anonKey);
+  return supabaseClient;
 }
 
 function allowedRolesForClassroom(classroom) {
@@ -186,7 +212,9 @@ function applyStatus(status) {
 }
 
 async function fetchStatus() {
-  const { data, error } = await supabase.rpc("app_get_status");
+  const client = getSupabaseClient();
+  const { data, error } = await client.rpc("app_get_status");
+
   if (error) {
     throw new Error(error.message || "Erro ao carregar status do sistema.");
   }
@@ -195,7 +223,9 @@ async function fetchStatus() {
 }
 
 async function callAction(rpcName, payload) {
-  const { data, error } = await supabase.rpc(rpcName, payload);
+  const client = getSupabaseClient();
+  const { data, error } = await client.rpc(rpcName, payload);
+
   if (error) {
     throw new Error(error.message || "Falha ao executar operação no Supabase.");
   }
@@ -204,12 +234,10 @@ async function callAction(rpcName, payload) {
 }
 
 async function startFlow(mode) {
-  if (!hasSupabaseConfig) {
-    openModal(
-      "error",
-      "Configuração pendente",
-      "Preencha SUPABASE_URL e SUPABASE_ANON_KEY no arquivo config.js para continuar."
-    );
+  try {
+    getSupabaseClient();
+  } catch (error) {
+    openModal("error", "Configuração pendente", error.message);
     return;
   }
 
@@ -387,5 +415,11 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+window.addEventListener("error", (event) => {
+  openModal("error", "Erro no app", event.message || "Ocorreu um erro inesperado no carregamento.");
+});
+
 modal.classList.add("hidden");
 switchScreen(accessScreen);
+
+
