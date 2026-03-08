@@ -4,7 +4,7 @@ const path = require("path");
 
 const HOST = "127.0.0.1";
 const PORT = 3000;
-const STUDENT_PASSWORD = "univap.humanidades";
+const STUDENT_PASSWORD = "univ@p.humanidades";
 const ROLE_LIMITS = {
   Assessor: 10,
   Deputado: 10,
@@ -363,3 +363,4 @@ server.listen(PORT, HOST, () => {
   console.log(`Servidor rodando em http://${HOST}:${PORT}`);
   console.log(`Log de cadastros: ${LOG_FILE}`);
 });
+
