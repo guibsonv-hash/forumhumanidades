@@ -17,13 +17,7 @@
 
       <form id="access-form" class="form" novalidate>
         <label for="student-password">Senha de aluno</label>
-        <input
-          id="student-password"
-          name="student-password"
-          type="password"
-          placeholder="Digite a senha de acesso"
-          required
-        >
+        <input id="student-password" name="student-password" type="password" placeholder="Digite a senha de acesso" required>
         <p id="access-error" class="error-message hidden" aria-live="polite">Senha inv&aacute;lida.</p>
         <p id="access-loading" class="info-message hidden" aria-live="polite">Carregando dados do sistema...</p>
 
@@ -425,13 +419,7 @@
         </select>
 
         <label for="email">E-mail de contato</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="aluno@exemplo.com"
-          required
-        >
+        <input id="email" name="email" type="email" placeholder="aluno@exemplo.com" required>
 
         <button type="submit">Pr&oacute;xima Etapa</button>
       </form>
@@ -451,13 +439,7 @@
         </select>
 
         <label for="registered-email">E-mail usado no cadastro</label>
-        <input
-          id="registered-email"
-          name="registered-email"
-          type="email"
-          placeholder="Digite o e-mail j&aacute; cadastrado"
-          required
-        >
+        <input id="registered-email" name="registered-email" type="email" placeholder="Digite o e-mail j&aacute; cadastrado" required>
 
         <button type="submit">Pr&oacute;xima Etapa</button>
       </form>
@@ -485,6 +467,46 @@
         </div>
       </form>
     </section>
+
+    <section id="partner-screen" class="card hidden">
+      <header class="card-header">
+        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
+        <h1>F&oacute;rum Humanidades 2026</h1>
+        <p id="partner-subtitle" class="subtitle">Etapa 3: Cadastro do parceiro</p>
+      </header>
+
+      <form id="partner-form" class="form" novalidate>
+        <p id="partner-summary" class="info-message"></p>
+
+        <label for="partner-classroom">Turma do parceiro</label>
+        <select id="partner-classroom" name="partner-classroom" required>
+          <option value="">Selecione a turma</option>
+          <option value="1&ordm; ano A">1&ordm; ano A</option>
+          <option value="1&ordm; ano B">1&ordm; ano B</option>
+          <option value="1&ordm; ano C">1&ordm; ano C</option>
+          <option value="1&ordm; ano D">1&ordm; ano D</option>
+          <option value="2&ordm; ano A">2&ordm; ano A</option>
+          <option value="2&ordm; ano B">2&ordm; ano B</option>
+          <option value="2&ordm; ano C">2&ordm; ano C</option>
+          <option value="3&ordm; ano A">3&ordm; ano A</option>
+          <option value="3&ordm; ano B">3&ordm; ano B</option>
+          <option value="3&ordm; ano C">3&ordm; ano C</option>
+        </select>
+
+        <label for="partner-name">Nome do parceiro</label>
+        <select id="partner-name" name="partner-name" required>
+          <option value="">Selecione o nome</option>
+        </select>
+
+        <label for="partner-email">E-mail do parceiro</label>
+        <input id="partner-email" name="partner-email" type="email" placeholder="parceiro@exemplo.com" required>
+
+        <div class="action-row">
+          <button id="back-to-role-btn" type="button" class="secondary-btn">Voltar</button>
+          <button type="submit">Finalizar cadastro</button>
+        </div>
+      </form>
+    </section>
   </main>
 
   <div id="feedback-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -496,13 +518,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260308"></script>
-  <script src="script.js?v=20260308"></script>
+  <script src="config.js?v=20260308-2"></script>
+  <script src="script.js?v=20260308-2"></script>
 </body>
 </html>
-
-
-
-
-
-
