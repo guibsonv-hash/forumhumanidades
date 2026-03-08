@@ -1,5 +1,6 @@
 const APP_PASSWORD = "univ@p.humanidades";
 const ROLE_ORDER = ["Assessor", "Deputado", "Imprensa", "Staff"];
+const UNLIMITED_ROLES = new Set(["Assessor", "Deputado"]);
 
 const accessScreen = document.getElementById("access-screen");
 const studentScreen = document.getElementById("student-screen");
@@ -9,6 +10,7 @@ const roleScreen = document.getElementById("role-screen");
 const accessForm = document.getElementById("access-form");
 const accessPasswordInput = document.getElementById("student-password");
 const accessError = document.getElementById("access-error");
+const accessLoading = document.getElementById("access-loading");
 const newRegistrationButton = document.getElementById("new-registration-btn");
 const changeRegistrationButton = document.getElementById("change-registration-btn");
 
@@ -45,6 +47,7 @@ let flowMode = null;
 let currentRegistration = null;
 let modalAfterCloseAction = null;
 let supabaseClient = null;
+let isStartingFlow = false;
 
 function normalize(value) {
   return String(value || "").trim().toLocaleLowerCase("pt-BR");
@@ -81,16 +84,45 @@ function getSupabaseClient() {
   return supabaseClient;
 }
 
+function getSchoolYear(classroom) {
+  const m = String(classroom || "").match(/[123]/);
+  return m ? m[0] : "";
+}
+
 function allowedRolesForClassroom(classroom) {
-  if (classroom.startsWith("1° ano")) {
+  const year = getSchoolYear(classroom);
+
+  if (year === "1") {
     return ["Assessor", "Deputado", "Staff"];
   }
 
-  if (classroom.startsWith("2° ano") || classroom.startsWith("3° ano")) {
+  if (year === "2" || year === "3") {
     return ["Assessor", "Deputado", "Imprensa"];
   }
 
   return ["Assessor", "Deputado"];
+}
+
+function formatRemaining(role, remaining) {
+  if (UNLIMITED_ROLES.has(role) || remaining === null || typeof remaining === "undefined") {
+    return "vagas ilimitadas";
+  }
+
+  const count = Number(remaining || 0);
+  return `${count} vaga${count === 1 ? "" : "s"}`;
+}
+
+function setAccessLoading(isLoading) {
+  isStartingFlow = isLoading;
+  newRegistrationButton.disabled = isLoading;
+  changeRegistrationButton.disabled = isLoading;
+  accessPasswordInput.disabled = isLoading;
+
+  if (isLoading) {
+    accessLoading.classList.remove("hidden");
+  } else {
+    accessLoading.classList.add("hidden");
+  }
 }
 
 function switchScreen(target) {
@@ -136,6 +168,7 @@ function resetToAccessScreen() {
   flowMode = null;
   currentRegistration = null;
   accessError.classList.add("hidden");
+  setAccessLoading(false);
   switchScreen(accessScreen);
 }
 
@@ -179,24 +212,24 @@ function renderRoleOptions(classroom) {
       return;
     }
 
-    const remaining = Number(statusData.vacancies[role] || 0);
+    const remaining = statusData.vacancies[role];
     const option = document.createElement("option");
     option.value = role;
 
-    if (remaining <= 0) {
+    if (!UNLIMITED_ROLES.has(role) && Number(remaining || 0) <= 0) {
       option.disabled = true;
       option.textContent = `${role} (indisponível)`;
     } else {
-      option.textContent = `${role} (${remaining} vaga${remaining === 1 ? "" : "s"})`;
+      option.textContent = `${role} (${formatRemaining(role, remaining)})`;
     }
 
     roleSelect.appendChild(option);
   });
 
   roleHint.textContent =
-    classroom.startsWith("1° ano")
-      ? "Para turmas de 1° ano, o cargo Imprensa não é permitido."
-      : "Para turmas de 2°/3° ano, o cargo Staff não é permitido.";
+    getSchoolYear(classroom) === "1"
+      ? "Para turmas de 1º ano, o cargo Imprensa não é permitido."
+      : "Para turmas de 2º/3º ano, o cargo Staff não é permitido.";
 }
 
 function applyStatus(status) {
@@ -234,6 +267,10 @@ async function callAction(rpcName, payload) {
 }
 
 async function startFlow(mode) {
+  if (isStartingFlow) {
+    return;
+  }
+
   try {
     getSupabaseClient();
   } catch (error) {
@@ -247,6 +284,7 @@ async function startFlow(mode) {
   }
 
   accessError.classList.add("hidden");
+  setAccessLoading(true);
 
   try {
     await fetchStatus();
@@ -254,12 +292,13 @@ async function startFlow(mode) {
 
     if (mode === "new") {
       switchScreen(studentScreen);
-      return;
+    } else {
+      switchScreen(changeScreen);
     }
-
-    switchScreen(changeScreen);
   } catch (error) {
     openModal("error", "Erro", error.message || "Não foi possível carregar os dados.");
+  } finally {
+    setAccessLoading(false);
   }
 }
 
@@ -381,10 +420,11 @@ roleForm.addEventListener("submit", async (event) => {
     }
 
     const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudança de cadastro concluída!";
+    const remainingText = formatRemaining(role, result.remainingForRole);
     const successMessage =
       flowMode === "new"
-        ? `Cargo: ${role}. Vagas restantes neste cargo: ${result.remainingForRole}.`
-        : `Cargo alterado para ${role}. Vagas restantes neste cargo: ${result.remainingForRole}.`;
+        ? `Cargo: ${role}. Disponibilidade: ${remainingText}.`
+        : `Cargo alterado para ${role}. Disponibilidade: ${remainingText}.`;
 
     openModal("success", successTitle, successMessage, resetToAccessScreen);
   } catch (error) {
@@ -419,7 +459,6 @@ window.addEventListener("error", (event) => {
   openModal("error", "Erro no app", event.message || "Ocorreu um erro inesperado no carregamento.");
 });
 
+setAccessLoading(false);
 modal.classList.add("hidden");
 switchScreen(accessScreen);
-
-
