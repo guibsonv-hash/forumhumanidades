@@ -1,4 +1,4 @@
-﻿create extension if not exists pgcrypto;
+create extension if not exists pgcrypto;
 
 -- Execute este script no SQL Editor do Supabase.
 
@@ -18,9 +18,21 @@ language sql
 immutable
 as $$
   select case
-    when p_classroom like '1° ano%' then array['Assessor', 'Deputado', 'Staff']::text[]
-    when p_classroom like '2° ano%' or p_classroom like '3° ano%' then array['Assessor', 'Deputado', 'Imprensa']::text[]
+    when left(trim(p_classroom), 1) = '1' then array['Assessor', 'Deputado', 'Staff']::text[]
+    when left(trim(p_classroom), 1) in ('2', '3') then array['Assessor', 'Deputado', 'Imprensa']::text[]
     else array['Assessor', 'Deputado']::text[]
+  end;
+$$;
+
+create or replace function public.forum_role_limit(p_role text)
+returns int
+language sql
+immutable
+as $$
+  select case
+    when p_role = 'Staff' then 30
+    when p_role = 'Imprensa' then 30
+    else null
   end;
 $$;
 
@@ -31,10 +43,10 @@ security definer
 set search_path = public
 as $$
   with role_limits as (
-    select 'Assessor'::text as role, 10::int as limit_count
-    union all select 'Deputado', 10
-    union all select 'Imprensa', 10
-    union all select 'Staff', 10
+    select 'Assessor'::text as role, null::int as limit_count
+    union all select 'Deputado', null::int
+    union all select 'Imprensa', 30
+    union all select 'Staff', 30
   ),
   used_by_role as (
     select role, count(*)::int as used_count
@@ -42,7 +54,13 @@ as $$
     group by role
   ),
   vacancies as (
-    select jsonb_object_agg(r.role, greatest(r.limit_count - coalesce(u.used_count, 0), 0)) as data
+    select jsonb_object_agg(
+      r.role,
+      case
+        when r.limit_count is null then null
+        else greatest(r.limit_count - coalesce(u.used_count, 0), 0)
+      end
+    ) as data
     from role_limits r
     left join used_by_role u on u.role = r.role
   )
@@ -83,6 +101,8 @@ declare
   v_role text := trim(coalesce(p_role, ''));
   v_allowed_roles text[];
   v_used int;
+  v_limit int;
+  v_remaining int;
 begin
   lock table public.forum_registrations in share row exclusive mode;
 
@@ -111,17 +131,20 @@ begin
   from public.forum_registrations
   where role = v_role;
 
-  if v_used >= 10 then
+  v_limit := public.forum_role_limit(v_role);
+  if v_limit is not null and v_used >= v_limit then
     return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Esse cargo não possui vagas.', 'status', public.app_get_status());
   end if;
 
   insert into public.forum_registrations (classroom, student_name, role, email)
   values (v_classroom, v_student, v_role, v_email);
 
+  v_remaining := case when v_limit is null then null else greatest(v_limit - (v_used + 1), 0) end;
+
   return jsonb_build_object(
     'ok', true,
     'message', 'Cadastro realizado com sucesso.',
-    'remainingForRole', greatest(10 - (v_used + 1), 0),
+    'remainingForRole', v_remaining,
     'status', public.app_get_status()
   );
 end;
@@ -145,6 +168,8 @@ declare
   v_current public.forum_registrations%rowtype;
   v_allowed_roles text[];
   v_used int;
+  v_limit int;
+  v_remaining int;
 begin
   lock table public.forum_registrations in share row exclusive mode;
 
@@ -175,14 +200,24 @@ begin
   end if;
 
   if v_current.role = v_new_role then
-    return jsonb_build_object('ok', true, 'message', 'Cargo já era o selecionado.', 'remainingForRole', greatest(10 - (select count(*) from public.forum_registrations where role = v_new_role), 0), 'status', public.app_get_status());
+    v_limit := public.forum_role_limit(v_new_role);
+    if v_limit is null then
+      v_remaining := null;
+    else
+      select greatest(v_limit - count(*)::int, 0) into v_remaining
+      from public.forum_registrations
+      where role = v_new_role;
+    end if;
+
+    return jsonb_build_object('ok', true, 'message', 'Cargo já era o selecionado.', 'remainingForRole', v_remaining, 'status', public.app_get_status());
   end if;
 
   select count(*)::int into v_used
   from public.forum_registrations
   where role = v_new_role;
 
-  if v_used >= 10 then
+  v_limit := public.forum_role_limit(v_new_role);
+  if v_limit is not null and v_used >= v_limit then
     return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Não há vagas para o novo cargo.', 'status', public.app_get_status());
   end if;
 
@@ -191,10 +226,12 @@ begin
       updated_at = now()
   where id = v_current.id;
 
+  v_remaining := case when v_limit is null then null else greatest(v_limit - (v_used + 1), 0) end;
+
   return jsonb_build_object(
     'ok', true,
     'message', 'Cadastro alterado com sucesso.',
-    'remainingForRole', greatest(10 - (v_used + 1), 0),
+    'remainingForRole', v_remaining,
     'status', public.app_get_status()
   );
 end;
@@ -207,5 +244,5 @@ grant usage on schema public to anon, authenticated;
 grant execute on function public.app_get_status() to anon, authenticated;
 grant execute on function public.app_new_registration(text, text, text, text) to anon, authenticated;
 grant execute on function public.app_change_registration(text, text, text, text) to anon, authenticated;
-
-
+grant execute on function public.forum_allowed_roles(text) to anon, authenticated;
+grant execute on function public.forum_role_limit(text) to anon, authenticated;
