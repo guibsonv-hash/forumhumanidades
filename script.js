@@ -346,6 +346,9 @@ function applyStatus(status) {
       email: toCanonical(entry.email),
       role: toCanonical(entry.role),
       pairGroupId: entry.pairGroupId || null,
+      partnerName: toCanonical(entry.partnerName),
+      partnerClassroom: toCanonical(entry.partnerClassroom),
+      partnerRole: toCanonical(entry.partnerRole),
     })),
   };
 
@@ -369,7 +372,12 @@ async function callAction(rpcName, payload) {
   const { data, error } = await client.rpc(rpcName, payload);
 
   if (error) {
-    throw new Error(error.message || "Falha ao executar operação no Supabase.");
+    const rawMessage = String(error.message || "");
+    if (rawMessage.includes("Could not choose the best candidate function")) {
+      throw new Error("Funções RPC desatualizadas no Supabase. Execute novamente o arquivo supabase/schema.sql no SQL Editor e recarregue a página.");
+    }
+
+    throw new Error(rawMessage || "Falha ao executar operação no Supabase.");
   }
 
   return data;
@@ -716,5 +724,6 @@ window.addEventListener("error", (event) => {
 setAccessLoading(false);
 modal.classList.add("hidden");
 switchScreen(accessScreen);
+
 
 
