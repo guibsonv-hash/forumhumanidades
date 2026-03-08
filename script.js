@@ -6,6 +6,7 @@ const accessScreen = document.getElementById("access-screen");
 const studentScreen = document.getElementById("student-screen");
 const changeScreen = document.getElementById("change-screen");
 const roleScreen = document.getElementById("role-screen");
+const partnerScreen = document.getElementById("partner-screen");
 
 const accessForm = document.getElementById("access-form");
 const accessPasswordInput = document.getElementById("student-password");
@@ -30,6 +31,14 @@ const roleHint = document.getElementById("role-hint");
 const studentSummary = document.getElementById("student-summary");
 const backToPreviousButton = document.getElementById("back-to-previous-btn");
 
+const partnerForm = document.getElementById("partner-form");
+const partnerSubtitle = document.getElementById("partner-subtitle");
+const partnerSummary = document.getElementById("partner-summary");
+const partnerClassroomSelect = document.getElementById("partner-classroom");
+const partnerNameSelect = document.getElementById("partner-name");
+const partnerEmailInput = document.getElementById("partner-email");
+const backToRoleButton = document.getElementById("back-to-role-btn");
+
 const modal = document.getElementById("feedback-modal");
 const modalContent = document.getElementById("modal-content");
 const modalTitle = document.getElementById("modal-title");
@@ -45,12 +54,18 @@ let statusData = {
 
 let flowMode = null;
 let currentRegistration = null;
+let pendingRole = null;
 let modalAfterCloseAction = null;
 let supabaseClient = null;
 let isStartingFlow = false;
+let isSubmitting = false;
+
+function toCanonical(value) {
+  return String(value || "").normalize("NFC").trim();
+}
 
 function normalize(value) {
-  return String(value || "")
+  return toCanonical(value)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
@@ -59,7 +74,6 @@ function normalize(value) {
 
 function getSupabaseConfig() {
   const raw = window.APP_CONFIG || {};
-
   const url = String(raw.SUPABASE_URL || raw.supabaseUrl || window.SUPABASE_URL || "").trim();
   const anonKey = String(raw.SUPABASE_ANON_KEY || raw.supabaseAnonKey || window.SUPABASE_ANON_KEY || "").trim();
   const looksPlaceholder = url.includes("YOUR-PROJECT-REF") || anonKey.includes("YOUR_SUPABASE_ANON_KEY");
@@ -107,6 +121,22 @@ function allowedRolesForClassroom(classroom) {
   return ["Assessor", "Deputado"];
 }
 
+function roleNeedsPartner(role) {
+  return role === "Assessor" || role === "Deputado";
+}
+
+function counterpartRole(role) {
+  if (role === "Assessor") {
+    return "Deputado";
+  }
+
+  if (role === "Deputado") {
+    return "Assessor";
+  }
+
+  return null;
+}
+
 function formatRemaining(role, remaining) {
   if (UNLIMITED_ROLES.has(role) || remaining === null || typeof remaining === "undefined") {
     return "vagas ilimitadas";
@@ -134,6 +164,7 @@ function switchScreen(target) {
   studentScreen.classList.add("hidden");
   changeScreen.classList.add("hidden");
   roleScreen.classList.add("hidden");
+  partnerScreen.classList.add("hidden");
   target.classList.remove("hidden");
 }
 
@@ -169,8 +200,11 @@ function resetToAccessScreen() {
   studentForm.reset();
   changeForm.reset();
   roleForm.reset();
+  partnerForm.reset();
   flowMode = null;
   currentRegistration = null;
+  pendingRole = null;
+  isSubmitting = false;
   accessError.classList.add("hidden");
   setAccessLoading(false);
   switchScreen(accessScreen);
@@ -191,19 +225,82 @@ function applyUnavailableStudents() {
 }
 
 function populateRegisteredStudents() {
-  const selected = registeredStudentNameSelect.value;
-  const placeholder = '<option value="">Selecione o aluno</option>';
+  const selected = toCanonical(registeredStudentNameSelect.value);
 
   const sorted = [...statusData.registeredEntries].sort((a, b) =>
     a.studentName.localeCompare(b.studentName, "pt-BR", { sensitivity: "base" })
   );
 
-  registeredStudentNameSelect.innerHTML =
-    placeholder +
-    sorted.map((entry) => `<option value="${entry.studentName}">${entry.studentName}</option>`).join("");
+  registeredStudentNameSelect.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Selecione o aluno";
+  registeredStudentNameSelect.appendChild(placeholder);
+
+  sorted.forEach((entry) => {
+    const option = document.createElement("option");
+    option.value = entry.studentName;
+    option.textContent = entry.studentName;
+    registeredStudentNameSelect.appendChild(option);
+  });
 
   if (selected) {
     registeredStudentNameSelect.value = selected;
+  }
+}
+
+function getCurrentPairPartner() {
+  if (!currentRegistration || !currentRegistration.pairGroupId) {
+    return null;
+  }
+
+  return (
+    statusData.registeredEntries.find(
+      (entry) =>
+        entry.pairGroupId &&
+        entry.pairGroupId === currentRegistration.pairGroupId &&
+        normalize(entry.studentName) !== normalize(currentRegistration.studentName)
+    ) || null
+  );
+}
+
+function populatePartnerNames() {
+  const selected = toCanonical(partnerNameSelect.value);
+  const unavailable = new Set(statusData.registeredStudents.map((name) => normalize(name)));
+  const currentPartner = getCurrentPairPartner();
+  const currentPartnerName = currentPartner ? normalize(currentPartner.studentName) : null;
+
+  partnerNameSelect.innerHTML = '<option value="">Selecione o nome</option>';
+
+  Array.from(studentNameSelect.options).forEach((option, index) => {
+    if (index === 0) {
+      return;
+    }
+
+    const name = toCanonical(option.value);
+    if (!name) {
+      return;
+    }
+
+    const candidate = document.createElement("option");
+    candidate.value = name;
+    candidate.textContent = name;
+
+    if (currentRegistration && normalize(currentRegistration.studentName) === normalize(name)) {
+      candidate.disabled = true;
+    }
+
+    const isCurrentPartner = currentPartnerName && currentPartnerName === normalize(name);
+    if (unavailable.has(normalize(name)) && !isCurrentPartner) {
+      candidate.disabled = true;
+      candidate.textContent = `${name} (indisponível)`;
+    }
+
+    partnerNameSelect.appendChild(candidate);
+  });
+
+  if (selected) {
+    partnerNameSelect.value = selected;
   }
 }
 
@@ -237,11 +334,19 @@ function renderRoleOptions(classroom) {
 }
 
 function applyStatus(status) {
+  const entries = Array.isArray(status?.registeredEntries) ? status.registeredEntries : [];
+
   statusData = {
     vacancies: status?.vacancies || {},
-    registeredStudents: status?.registeredStudents || [],
-    registeredEmails: status?.registeredEmails || [],
-    registeredEntries: status?.registeredEntries || [],
+    registeredStudents: (status?.registeredStudents || []).map((name) => toCanonical(name)).filter(Boolean),
+    registeredEmails: (status?.registeredEmails || []).map((email) => toCanonical(email)).filter(Boolean),
+    registeredEntries: entries.map((entry) => ({
+      classroom: toCanonical(entry.classroom),
+      studentName: toCanonical(entry.studentName),
+      email: toCanonical(entry.email),
+      role: toCanonical(entry.role),
+      pairGroupId: entry.pairGroupId || null,
+    })),
   };
 
   applyUnavailableStudents();
@@ -282,7 +387,7 @@ async function startFlow(mode) {
     return;
   }
 
-  if (accessPasswordInput.value !== APP_PASSWORD) {
+  if (toCanonical(accessPasswordInput.value) !== APP_PASSWORD) {
     accessError.classList.remove("hidden");
     return;
   }
@@ -306,6 +411,103 @@ async function startFlow(mode) {
   }
 }
 
+async function finalizeRegistration(role, partnerPayload) {
+  const rpcName = flowMode === "new" ? "app_new_registration" : "app_change_registration";
+
+  const result = await callAction(rpcName, {
+    p_classroom: currentRegistration.classroom,
+    p_student_name: currentRegistration.studentName,
+    p_email: currentRegistration.email,
+    p_role: role,
+    p_partner_classroom: partnerPayload?.classroom || null,
+    p_partner_student_name: partnerPayload?.studentName || null,
+    p_partner_email: partnerPayload?.email || null,
+  });
+
+  applyStatus(result.status);
+
+  if (!result.ok) {
+    openRegistrationError(result);
+    return;
+  }
+
+  const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudança de cadastro concluída!";
+  const remainingText = formatRemaining(role, result.remainingForRole);
+  const successMessage =
+    flowMode === "new"
+      ? `Cargo: ${role}. Disponibilidade: ${remainingText}.`
+      : `Cadastro atualizado para ${role}. Disponibilidade: ${remainingText}.`;
+
+  openModal("success", successTitle, successMessage, resetToAccessScreen);
+}
+
+function openRegistrationError(result) {
+  const code = String(result?.code || "");
+  const fallbackMessage = result?.message || "Não foi possível concluir a operação.";
+
+  if (code === "EMAIL_EXISTS") {
+    openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail para continuar.");
+    return;
+  }
+
+  if (code === "STUDENT_EXISTS") {
+    openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
+    return;
+  }
+
+  if (code === "EMAIL_MISMATCH") {
+    openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao cadastro do aluno.");
+    return;
+  }
+
+  if (code === "PARTNER_REQUIRED") {
+    openModal("error", "Parceiro obrigatório", "Para Assessor/Deputado é obrigatório incluir um parceiro.");
+    return;
+  }
+
+  if (code === "PARTNER_SAME_STUDENT") {
+    openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente e com outro e-mail.");
+    return;
+  }
+
+  if (code === "PARTNER_STUDENT_EXISTS") {
+    openModal("error", "Parceiro indisponível", "O nome do parceiro já está cadastrado no sistema.");
+    return;
+  }
+
+  if (code === "PARTNER_EMAIL_EXISTS") {
+    openModal("error", "E-mail do parceiro em uso", "O e-mail informado para o parceiro já está associado a outro cadastro.");
+    return;
+  }
+
+  if (code === "PARTNER_EMAIL_MISMATCH") {
+    openModal("error", "E-mail do parceiro divergente", "O e-mail não corresponde ao nome do parceiro selecionado.");
+    return;
+  }
+
+  if (code === "PARTNER_ROLE_NOT_ALLOWED") {
+    openModal("error", "Turma do parceiro inválida", "A turma escolhida não permite o cargo obrigatório do parceiro.");
+    return;
+  }
+
+  if (code === "ROLE_NOT_ALLOWED") {
+    openModal("error", "Cargo não permitido", "Esse cargo não pode ser selecionado para a turma informada.");
+    return;
+  }
+
+  if (code === "NO_VACANCY") {
+    openModal("error", "Sem vagas", "Não há vagas disponíveis para este cargo no momento.");
+    return;
+  }
+
+  if (code === "RECORD_NOT_FOUND") {
+    openModal("error", "Cadastro não encontrado", "Não localizamos esse cadastro. Verifique os dados e tente novamente.");
+    return;
+  }
+
+  openModal("error", "Erro no cadastro", fallbackMessage);
+}
+
 newRegistrationButton.addEventListener("click", () => startFlow("new"));
 changeRegistrationButton.addEventListener("click", () => startFlow("change"));
 
@@ -317,9 +519,9 @@ accessForm.addEventListener("submit", (event) => {
 studentForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const classroom = classroomSelect.value.trim();
-  const studentName = studentNameSelect.value.trim();
-  const email = emailInput.value.trim();
+  const classroom = toCanonical(classroomSelect.value);
+  const studentName = toCanonical(studentNameSelect.value);
+  const email = toCanonical(emailInput.value);
 
   if (!classroom || !studentName || !email) {
     openModal("error", "Dados incompletos", "Preencha turma, nome e e-mail para continuar.");
@@ -348,8 +550,8 @@ studentForm.addEventListener("submit", (event) => {
 changeForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const studentName = registeredStudentNameSelect.value.trim();
-  const email = registeredEmailInput.value.trim();
+  const studentName = toCanonical(registeredStudentNameSelect.value);
+  const email = toCanonical(registeredEmailInput.value);
 
   if (!studentName || !email) {
     openModal("error", "Dados incompletos", "Selecione o aluno e informe o e-mail já cadastrado.");
@@ -375,6 +577,7 @@ changeForm.addEventListener("submit", (event) => {
     studentName: entry.studentName,
     email: entry.email,
     previousRole: entry.role,
+    pairGroupId: entry.pairGroupId || null,
   };
 
   roleSubtitle.textContent = "Etapa 2: Escolha o novo cargo";
@@ -386,53 +589,96 @@ changeForm.addEventListener("submit", (event) => {
 roleForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  if (isSubmitting) {
+    return;
+  }
+
   if (!currentRegistration || !flowMode) {
     openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
     resetToAccessScreen();
     return;
   }
 
-  const role = roleSelect.value.trim();
+  const role = toCanonical(roleSelect.value);
   if (!role) {
     openModal("error", "Cargo obrigatório", "Selecione um cargo para finalizar.");
     return;
   }
 
-  const rpcName = flowMode === "new" ? "app_new_registration" : "app_change_registration";
+  pendingRole = role;
+
+  if (!roleNeedsPartner(role)) {
+    try {
+      isSubmitting = true;
+      await finalizeRegistration(role, null);
+    } catch (error) {
+      openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
+    } finally {
+      isSubmitting = false;
+    }
+    return;
+  }
+
+  const partnerRole = counterpartRole(role);
+  const currentPartner = getCurrentPairPartner();
+
+  partnerForm.reset();
+  partnerSubtitle.textContent = `Etapa 3: Incluir ${partnerRole}`;
+  partnerSummary.textContent = `${currentRegistration.studentName} (${role}) precisa de um parceiro com cargo ${partnerRole}.`;
+  populatePartnerNames();
+
+  if (currentPartner) {
+    partnerClassroomSelect.value = currentPartner.classroom;
+    partnerNameSelect.value = currentPartner.studentName;
+    partnerEmailInput.value = currentPartner.email;
+  }
+
+  switchScreen(partnerScreen);
+});
+
+partnerForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (isSubmitting) {
+    return;
+  }
+
+  if (!currentRegistration || !pendingRole) {
+    openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
+    resetToAccessScreen();
+    return;
+  }
+
+  const partnerClassroom = toCanonical(partnerClassroomSelect.value);
+  const partnerName = toCanonical(partnerNameSelect.value);
+  const partnerEmail = toCanonical(partnerEmailInput.value);
+
+  if (!partnerClassroom || !partnerName || !partnerEmail) {
+    openModal("error", "Dados incompletos", "Preencha turma, nome e e-mail do parceiro.");
+    return;
+  }
+
+  if (normalize(partnerName) === normalize(currentRegistration.studentName)) {
+    openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente do cadastro principal.");
+    return;
+  }
+
+  if (normalize(partnerEmail) === normalize(currentRegistration.email)) {
+    openModal("error", "Parceiro inválido", "O e-mail do parceiro deve ser diferente do cadastro principal.");
+    return;
+  }
 
   try {
-    const result = await callAction(rpcName, {
-      p_classroom: currentRegistration.classroom,
-      p_student_name: currentRegistration.studentName,
-      p_email: currentRegistration.email,
-      p_role: role,
+    isSubmitting = true;
+    await finalizeRegistration(pendingRole, {
+      classroom: partnerClassroom,
+      studentName: partnerName,
+      email: partnerEmail,
     });
-
-    applyStatus(result.status);
-
-    if (!result.ok) {
-      if (result.code === "EMAIL_EXISTS") {
-        openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail para continuar.");
-      } else if (result.code === "STUDENT_EXISTS") {
-        openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
-      } else if (result.code === "EMAIL_MISMATCH") {
-        openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao cadastro do aluno.");
-      } else {
-        openModal("error", "Erro no cadastro", result.message || "Não foi possível concluir a operação.");
-      }
-      return;
-    }
-
-    const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudança de cadastro concluída!";
-    const remainingText = formatRemaining(role, result.remainingForRole);
-    const successMessage =
-      flowMode === "new"
-        ? `Cargo: ${role}. Disponibilidade: ${remainingText}.`
-        : `Cargo alterado para ${role}. Disponibilidade: ${remainingText}.`;
-
-    openModal("success", successTitle, successMessage, resetToAccessScreen);
   } catch (error) {
     openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
+  } finally {
+    isSubmitting = false;
   }
 });
 
@@ -443,6 +689,10 @@ backToPreviousButton.addEventListener("click", () => {
   }
 
   switchScreen(studentScreen);
+});
+
+backToRoleButton.addEventListener("click", () => {
+  switchScreen(roleScreen);
 });
 
 closeModalButton.addEventListener("click", closeModal);
@@ -466,3 +716,5 @@ window.addEventListener("error", (event) => {
 setAccessLoading(false);
 modal.classList.add("hidden");
 switchScreen(accessScreen);
+
+
