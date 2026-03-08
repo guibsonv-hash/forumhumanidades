@@ -50,7 +50,11 @@ let supabaseClient = null;
 let isStartingFlow = false;
 
 function normalize(value) {
-  return String(value || "").trim().toLocaleLowerCase("pt-BR");
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLocaleLowerCase("pt-BR");
 }
 
 function getSupabaseConfig() {
