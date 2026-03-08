@@ -1,10 +1,10 @@
-﻿const http = require("http");
+const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
 const HOST = "127.0.0.1";
 const PORT = 3000;
-const STUDENT_PASSWORD = "univ@p.humanidades";
+const STUDENT_PASSWORD = "univap.humanidades";
 const ROLE_LIMITS = {
   Assessor: 10,
   Deputado: 10,
