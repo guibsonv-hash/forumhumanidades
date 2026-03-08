@@ -1,0 +1,503 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F&Oacute;RUM HUMANIDADES 2026 - Cadastro</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <section id="access-screen" class="card">
+      <header class="card-header">
+        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
+        <h1>F&oacute;rum Humanidades 2026</h1>
+        <p class="subtitle">Acesso de aluno</p>
+      </header>
+
+      <form id="access-form" class="form" novalidate>
+        <label for="student-password">Senha de aluno</label>
+        <input
+          id="student-password"
+          name="student-password"
+          type="password"
+          placeholder="Digite a senha de acesso"
+          required
+        >
+        <p id="access-error" class="error-message hidden" aria-live="polite">Senha inv&aacute;lida.</p>
+
+        <div class="mode-row">
+          <button id="change-registration-btn" type="button" class="secondary-btn">Mudan&ccedil;a de Cadastro</button>
+          <button id="new-registration-btn" type="button" class="primary-btn">Novo Cadastro</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="student-screen" class="card hidden">
+      <header class="card-header">
+        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
+        <h1>F&oacute;rum Humanidades 2026</h1>
+        <p class="subtitle">Etapa 1: Dados do aluno</p>
+      </header>
+
+      <form id="student-form" class="form" novalidate>
+        <label for="classroom">Turma</label>
+        <select id="classroom" name="classroom" required>
+          <option value="">Selecione a turma</option>
+          <option value="1Â° ano A">1Â° ano A</option>
+          <option value="1Â° ano B">1Â° ano B</option>
+          <option value="1Â° ano C">1Â° ano C</option>
+          <option value="1Â° ano D">1Â° ano D</option>
+          <option value="2Â° ano A">2Â° ano A</option>
+          <option value="2Â° ano B">2Â° ano B</option>
+          <option value="2Â° ano C">2Â° ano C</option>
+          <option value="3Â° ano A">3Â° ano A</option>
+          <option value="3Â° ano B">3Â° ano B</option>
+          <option value="3Â° ano C">3Â° ano C</option>
+        </select>
+
+        <label for="student-name">Nome do aluno</label>
+        <select id="student-name" name="student-name" required>
+          <option value="">Selecione o nome</option>
+          <option value="Adriele Fernanda Guimar?es">Adriele Fernanda Guimar?es</option>
+          <option value="Al?cia Lopes de Matos Bidoia">Al?cia Lopes de Matos Bidoia</option>
+          <option value="Alex Oliveira Vazquez">Alex Oliveira Vazquez</option>
+          <option value="Alice Cardoso Quintanilha">Alice Cardoso Quintanilha</option>
+          <option value="Alice Chiste Bernardes">Alice Chiste Bernardes</option>
+          <option value="Alice Espindula de Morais">Alice Espindula de Morais</option>
+          <option value="Alice Poppe Sanz">Alice Poppe Sanz</option>
+          <option value="Alice Racanelli Trivilin">Alice Racanelli Trivilin</option>
+          <option value="Alice Santos Araujo">Alice Santos Araujo</option>
+          <option value="Alice Silveira Caon Oliveira">Alice Silveira Caon Oliveira</option>
+          <option value="Alicia Gomes Moreira dos Santos Lescura">Alicia Gomes Moreira dos Santos Lescura</option>
+          <option value="Aline Conte Campos">Aline Conte Campos</option>
+          <option value="Aline Kaneski de Moraes Colombo">Aline Kaneski de Moraes Colombo</option>
+          <option value="Allana Luiza da Silva">Allana Luiza da Silva</option>
+          <option value="Ana Beatriz da Rocha Neves">Ana Beatriz da Rocha Neves</option>
+          <option value="Ana Beatriz Menezes Ferreira">Ana Beatriz Menezes Ferreira</option>
+          <option value="Ana Beatriz Rocha Borges">Ana Beatriz Rocha Borges</option>
+          <option value="Ana Carolina Laureano Nogueira">Ana Carolina Laureano Nogueira</option>
+          <option value="Ana Clara da Silva Takuwa">Ana Clara da Silva Takuwa</option>
+          <option value="Ana Clara dos Santos Freitas">Ana Clara dos Santos Freitas</option>
+          <option value="Ana Clara Prezaniuk Damascena">Ana Clara Prezaniuk Damascena</option>
+          <option value="Ana Clara Torres Carrillo">Ana Clara Torres Carrillo</option>
+          <option value="Ana Flavia Poitevin Kunz">Ana Flavia Poitevin Kunz</option>
+          <option value="Ana Gi?lia Costa">Ana Gi?lia Costa</option>
+          <option value="Ana Giullia Braga Vara de Sales">Ana Giullia Braga Vara de Sales</option>
+          <option value="Ana Julia Jesus de Camargo">Ana Julia Jesus de Camargo</option>
+          <option value="Ana L?via Barbosa de Mello">Ana L?via Barbosa de Mello</option>
+          <option value="Ana L?via Maciel Moreira">Ana L?via Maciel Moreira</option>
+          <option value="Ana Leticia Valverde Frazilli">Ana Leticia Valverde Frazilli</option>
+          <option value="Ana Lu?sa Flores Paulino">Ana Lu?sa Flores Paulino</option>
+          <option value="Ana Luiza Cochi Gleizer">Ana Luiza Cochi Gleizer</option>
+          <option value="Ana Luiza Faria Veloso">Ana Luiza Faria Veloso</option>
+          <option value="Ana Luiza Fontoura Abrah?o">Ana Luiza Fontoura Abrah?o</option>
+          <option value="Angelo Caetano Siedler Morato">Angelo Caetano Siedler Morato</option>
+          <option value="Anna Giulia Cintra Paulino">Anna Giulia Cintra Paulino</option>
+          <option value="Ant?nio Bento Jambo de Araujo">Ant?nio Bento Jambo de Araujo</option>
+          <option value="Arthur Araujo Vasconcelos Pessoa Bispo">Arthur Araujo Vasconcelos Pessoa Bispo</option>
+          <option value="Arthur Guerreiro Oliveira">Arthur Guerreiro Oliveira</option>
+          <option value="Arthur Ribeiro Antunez">Arthur Ribeiro Antunez</option>
+          <option value="Artur da Costa Lima">Artur da Costa Lima</option>
+          <option value="B?rbara Marques Mazzocatto">B?rbara Marques Mazzocatto</option>
+          <option value="B?rbara Souza Bretas">B?rbara Souza Bretas</option>
+          <option value="B?rbara Thais de Siqueira Faxina">B?rbara Thais de Siqueira Faxina</option>
+          <option value="Beatriz Arce Vieira Peres">Beatriz Arce Vieira Peres</option>
+          <option value="Beatriz Fernandes dos Santos">Beatriz Fernandes dos Santos</option>
+          <option value="Beatriz Marini Lopes">Beatriz Marini Lopes</option>
+          <option value="Beatriz Mendon?a Teixeira">Beatriz Mendon?a Teixeira</option>
+          <option value="Bianca Dalprat de Oliveira Silva">Bianca Dalprat de Oliveira Silva</option>
+          <option value="Bianca Leandro Marcelino">Bianca Leandro Marcelino</option>
+          <option value="Bianca Poppe Sanz">Bianca Poppe Sanz</option>
+          <option value="Bianca Ribeiro Cherubini">Bianca Ribeiro Cherubini</option>
+          <option value="Bianca Trigo de Paula">Bianca Trigo de Paula</option>
+          <option value="Breno Pal?cio">Breno Pal?cio</option>
+          <option value="Caio Am?rico Foga?a Marucco de Oliveira">Caio Am?rico Foga?a Marucco de Oliveira</option>
+          <option value="Caio Augusto dos Anjos">Caio Augusto dos Anjos</option>
+          <option value="Caio Muller de Almeida">Caio Muller de Almeida</option>
+          <option value="Camila Cabral de Almeida">Camila Cabral de Almeida</option>
+          <option value="Camila de Carvalho">Camila de Carvalho</option>
+          <option value="Carlos Eduardo Torres Ribeiro">Carlos Eduardo Torres Ribeiro</option>
+          <option value="Caroline Beatriz Morais de Almeida">Caroline Beatriz Morais de Almeida</option>
+          <option value="Caroline dos Santos Pereira">Caroline dos Santos Pereira</option>
+          <option value="Caroline Silva Brizola">Caroline Silva Brizola</option>
+          <option value="Catharine dos Santos Soares">Catharine dos Santos Soares</option>
+          <option value="Cecilia Santos de Moura">Cecilia Santos de Moura</option>
+          <option value="Clara Amorim Correia">Clara Amorim Correia</option>
+          <option value="Davi de Souza Monteiro">Davi de Souza Monteiro</option>
+          <option value="Davi Monteiro Scarpel">Davi Monteiro Scarpel</option>
+          <option value="Davi Oliveira de Paula">Davi Oliveira de Paula</option>
+          <option value="Davi Pires Pereira">Davi Pires Pereira</option>
+          <option value="Davi Proc?pio de Oliveira">Davi Proc?pio de Oliveira</option>
+          <option value="Davi Rosseto Querubino">Davi Rosseto Querubino</option>
+          <option value="Davi Santana Minder Guimar?es Martins">Davi Santana Minder Guimar?es Martins</option>
+          <option value="Dayane dos Santos de Almeida">Dayane dos Santos de Almeida</option>
+          <option value="Diego Leite Petcov">Diego Leite Petcov</option>
+          <option value="Diego Lustosa Ferreira">Diego Lustosa Ferreira</option>
+          <option value="Eduarda Ramp Gon?alves">Eduarda Ramp Gon?alves</option>
+          <option value="Eduarda Vitoria Henrique Dos Santos">Eduarda Vitoria Henrique Dos Santos</option>
+          <option value="Eduardo Castilho de Souza">Eduardo Castilho de Souza</option>
+          <option value="Eduardo Henrique Negr?o de Moraes">Eduardo Henrique Negr?o de Moraes</option>
+          <option value="Eduardo Santos J?nior">Eduardo Santos J?nior</option>
+          <option value="Emanuelle Christine Silva Serafim">Emanuelle Christine Silva Serafim</option>
+          <option value="Emilly Nayara Maciel Cavalcante">Emilly Nayara Maciel Cavalcante</option>
+          <option value="Emmanuel Moreira e Ferreira">Emmanuel Moreira e Ferreira</option>
+          <option value="Enzo Bolzan Schaay">Enzo Bolzan Schaay</option>
+          <option value="Enzo Hideki Araujo Fukuda">Enzo Hideki Araujo Fukuda</option>
+          <option value="Enzo Martins Pereira Rosa">Enzo Martins Pereira Rosa</option>
+          <option value="Enzo Velloso de Almeida Barbosa">Enzo Velloso de Almeida Barbosa</option>
+          <option value="Esther Sara? Zambrano Ortega">Esther Sara? Zambrano Ortega</option>
+          <option value="Felipe Afonso Losso">Felipe Afonso Losso</option>
+          <option value="Felipe Antonio Bechelli Guapindaia Nogueira">Felipe Antonio Bechelli Guapindaia Nogueira</option>
+          <option value="Felipe Augusto de Lima Santos">Felipe Augusto de Lima Santos</option>
+          <option value="Felipe Gabriel da Silva Santos">Felipe Gabriel da Silva Santos</option>
+          <option value="Felipe Kouki Matsuuchi">Felipe Kouki Matsuuchi</option>
+          <option value="Felipe Rosenfeld Galis">Felipe Rosenfeld Galis</option>
+          <option value="Felipe Torres Brito">Felipe Torres Brito</option>
+          <option value="Felipe Valente Caleg?o">Felipe Valente Caleg?o</option>
+          <option value="Felipe Vieira Alves">Felipe Vieira Alves</option>
+          <option value="Fernanda Aika Ito">Fernanda Aika Ito</option>
+          <option value="Francisco Cavalari Loos">Francisco Cavalari Loos</option>
+          <option value="Gabriel Casagrande Queiroz">Gabriel Casagrande Queiroz</option>
+          <option value="Gabriel Castilho Lima">Gabriel Castilho Lima</option>
+          <option value="Gabriel Eiji Tokunaga Nagamine">Gabriel Eiji Tokunaga Nagamine</option>
+          <option value="Gabriel Ferreira Brizzante">Gabriel Ferreira Brizzante</option>
+          <option value="Gabriel Machado Liberal">Gabriel Machado Liberal</option>
+          <option value="Gabriel Rorato dos Santos Silveira">Gabriel Rorato dos Santos Silveira</option>
+          <option value="Gabriel Simonato Reis">Gabriel Simonato Reis</option>
+          <option value="Gabriel Vilela Costa Cortez">Gabriel Vilela Costa Cortez</option>
+          <option value="Gabriel Vit Sonnewend">Gabriel Vit Sonnewend</option>
+          <option value="Gabriela Pupio de Barros Souza">Gabriela Pupio de Barros Souza</option>
+          <option value="Gabriela Silva Santos Dias">Gabriela Silva Santos Dias</option>
+          <option value="Geovana Pimentel Bertges">Geovana Pimentel Bertges</option>
+          <option value="Geovana Silva de Assis">Geovana Silva de Assis</option>
+          <option value="Giovana Antonella Tavares">Giovana Antonella Tavares</option>
+          <option value="Giovana Diniz Rossi">Giovana Diniz Rossi</option>
+          <option value="Giovana Melo Moreira">Giovana Melo Moreira</option>
+          <option value="Giovanna Almeida Falanque">Giovanna Almeida Falanque</option>
+          <option value="Giovanna Fernandes de Moraes">Giovanna Fernandes de Moraes</option>
+          <option value="Giovanna Ferreira de Freitas">Giovanna Ferreira de Freitas</option>
+          <option value="Giulia Franchini Franco">Giulia Franchini Franco</option>
+          <option value="Guilherme Akiyo Muta">Guilherme Akiyo Muta</option>
+          <option value="Guilherme Bergamaschi Garcia">Guilherme Bergamaschi Garcia</option>
+          <option value="Guilherme Bernhard Vieira Lux">Guilherme Bernhard Vieira Lux</option>
+          <option value="Guilherme de Souza Lazzari">Guilherme de Souza Lazzari</option>
+          <option value="Guilherme Germano Gon?alves">Guilherme Germano Gon?alves</option>
+          <option value="Guilherme Jos? Mendes Gomes">Guilherme Jos? Mendes Gomes</option>
+          <option value="Guilherme Pinheiro do Prado Machado">Guilherme Pinheiro do Prado Machado</option>
+          <option value="Guilherme Senra Silva Rodrigues">Guilherme Senra Silva Rodrigues</option>
+          <option value="Gustavo Aquino de Souza">Gustavo Aquino de Souza</option>
+          <option value="Hayd?e Sousa Ramos">Hayd?e Sousa Ramos</option>
+          <option value="Helena Lima Castilho Silva">Helena Lima Castilho Silva</option>
+          <option value="Helena Machado Borota">Helena Machado Borota</option>
+          <option value="Helo?se Andrade Egalon">Helo?se Andrade Egalon</option>
+          <option value="Henri Faria Watanabe Rezende">Henri Faria Watanabe Rezende</option>
+          <option value="Henrique Andrade Azevedo">Henrique Andrade Azevedo</option>
+          <option value="Henry Guimar?es Foloni">Henry Guimar?es Foloni</option>
+          <option value="Ian Castro">Ian Castro</option>
+          <option value="Isabela Aslanian Alves">Isabela Aslanian Alves</option>
+          <option value="Isabela Gon?alves Grudtner">Isabela Gon?alves Grudtner</option>
+          <option value="Isabela Oliveira Borsoi">Isabela Oliveira Borsoi</option>
+          <option value="Isabela Quintiliano Trov?">Isabela Quintiliano Trov?</option>
+          <option value="Isabella Azevedo Felix de Moura">Isabella Azevedo Felix de Moura</option>
+          <option value="Isabella Carvalho de Morais">Isabella Carvalho de Morais</option>
+          <option value="Isabella de Souza Reis">Isabella de Souza Reis</option>
+          <option value="Isabella Henrique Martinez Morais">Isabella Henrique Martinez Morais</option>
+          <option value="Isabella Marques Costa">Isabella Marques Costa</option>
+          <option value="Isabelle Cristine Piovesan">Isabelle Cristine Piovesan</option>
+          <option value="Isabelle de Abreu Silva">Isabelle de Abreu Silva</option>
+          <option value="Isabelly F?lix Ribeiro Silva">Isabelly F?lix Ribeiro Silva</option>
+          <option value="Isabely da Silva Freitas">Isabely da Silva Freitas</option>
+          <option value="Isadora Almeida de Oliveira">Isadora Almeida de Oliveira</option>
+          <option value="Isadora Costa Bassi">Isadora Costa Bassi</option>
+          <option value="Isadora Scarpelini Fernandes">Isadora Scarpelini Fernandes</option>
+          <option value="Izabelly Mar?lia Vieira Francisco">Izabelly Mar?lia Vieira Francisco</option>
+          <option value="J?lia Giffoni Cabral Cardoso">J?lia Giffoni Cabral Cardoso</option>
+          <option value="J?lia Leonel de Paiva Fran?a">J?lia Leonel de Paiva Fran?a</option>
+          <option value="J?lia Yumi Salomon Coelho Tatsukawa de Freitas">J?lia Yumi Salomon Coelho Tatsukawa de Freitas</option>
+          <option value="Jo?o Antonio de Almeida Diniz">Jo?o Antonio de Almeida Diniz</option>
+          <option value="Jo?o Henrique Rodrigues Pace">Jo?o Henrique Rodrigues Pace</option>
+          <option value="Jo?o Pedro Aoki Galv?o Monteiro">Jo?o Pedro Aoki Galv?o Monteiro</option>
+          <option value="Jo?o Pedro Bazalia dos Santos">Jo?o Pedro Bazalia dos Santos</option>
+          <option value="Jo?o Pedro dos Santos Gon?alves">Jo?o Pedro dos Santos Gon?alves</option>
+          <option value="Jo?o Pedro Ferreira Co?lho de Souza">Jo?o Pedro Ferreira Co?lho de Souza</option>
+          <option value="Jo?o Pedro Martins da Cruz">Jo?o Pedro Martins da Cruz</option>
+          <option value="Jo?o Vitor de Carvalho Bernardo">Jo?o Vitor de Carvalho Bernardo</option>
+          <option value="Jo?o Vitor dos Reis">Jo?o Vitor dos Reis</option>
+          <option value="Jorge Barreto Orozimbo Rodrigues">Jorge Barreto Orozimbo Rodrigues</option>
+          <option value="Julia Cordeiro Toledo Kazi">Julia Cordeiro Toledo Kazi</option>
+          <option value="Julia Costa dos Santos">Julia Costa dos Santos</option>
+          <option value="Julia Jeremias">Julia Jeremias</option>
+          <option value="Julia Lopes Evangelista">Julia Lopes Evangelista</option>
+          <option value="Julia Luz Torres">Julia Luz Torres</option>
+          <option value="Julia Rodrigues do Amaral">Julia Rodrigues do Amaral</option>
+          <option value="Karolayne Ferreira Lima">Karolayne Ferreira Lima</option>
+          <option value="L?via Gavino Ferraz">L?via Gavino Ferraz</option>
+          <option value="L?via Maria Dias da Silva">L?via Maria Dias da Silva</option>
+          <option value="La?s Amorim de Moraes">La?s Amorim de Moraes</option>
+          <option value="La?s Medeiros de Castro">La?s Medeiros de Castro</option>
+          <option value="Lara Silva de Oliveira">Lara Silva de Oliveira</option>
+          <option value="Lara Sophia Goveia Damasceno">Lara Sophia Goveia Damasceno</option>
+          <option value="Lara Tiffany Alem?o Gois Almeida">Lara Tiffany Alem?o Gois Almeida</option>
+          <option value="Larissa Borsoi de Paula Marino">Larissa Borsoi de Paula Marino</option>
+          <option value="Larissa Massoni">Larissa Massoni</option>
+          <option value="Laura Faria Petenazzi">Laura Faria Petenazzi</option>
+          <option value="Laura Mendon?a de Alc?ntara">Laura Mendon?a de Alc?ntara</option>
+          <option value="Laura Samprogna Borin">Laura Samprogna Borin</option>
+          <option value="Laura Sirenoni Andrade">Laura Sirenoni Andrade</option>
+          <option value="Lav?nia Saldanha Bandeira">Lav?nia Saldanha Bandeira</option>
+          <option value="Lavinia Isabelli Nery Carvalho">Lavinia Isabelli Nery Carvalho</option>
+          <option value="Lee Chih Yun">Lee Chih Yun</option>
+          <option value="Leonardo Batista de Miranda Rodrigues">Leonardo Batista de Miranda Rodrigues</option>
+          <option value="Leonardo Castilho Batista">Leonardo Castilho Batista</option>
+          <option value="Leonardo Ferreira Farias">Leonardo Ferreira Farias</option>
+          <option value="Leonardo Torao Agata Machado Loureiro">Leonardo Torao Agata Machado Loureiro</option>
+          <option value="Let?cia Matos dos Santos">Let?cia Matos dos Santos</option>
+          <option value="Let?cia Naomi Kajiki e Silva">Let?cia Naomi Kajiki e Silva</option>
+          <option value="Let?cia Savariego Alvarenga">Let?cia Savariego Alvarenga</option>
+          <option value="Leticia Brito Comitre">Leticia Brito Comitre</option>
+          <option value="Leticia Magalh?es Alves">Leticia Magalh?es Alves</option>
+          <option value="Lilian Naomi Konishi Okada">Lilian Naomi Konishi Okada</option>
+          <option value="Lilian Oliveira Silva">Lilian Oliveira Silva</option>
+          <option value="Lorena Sakuragui Oliveira">Lorena Sakuragui Oliveira</option>
+          <option value="Lorenzo Bucci Martins">Lorenzo Bucci Martins</option>
+          <option value="Luana Marini Lopes">Luana Marini Lopes</option>
+          <option value="Luany de Brito Fran?a">Luany de Brito Fran?a</option>
+          <option value="Luara Cintra Morais">Luara Cintra Morais</option>
+          <option value="Lucas de Siqueira Valverde">Lucas de Siqueira Valverde</option>
+          <option value="Lucas Fernandes de Assis">Lucas Fernandes de Assis</option>
+          <option value="Lucas Miguel dos Santos Rocha">Lucas Miguel dos Santos Rocha</option>
+          <option value="Lucas Miguel G?es Brogliato">Lucas Miguel G?es Brogliato</option>
+          <option value="Lucas Pereira da Silva Alves">Lucas Pereira da Silva Alves</option>
+          <option value="Lucas Schwan Guimar?es Mendes">Lucas Schwan Guimar?es Mendes</option>
+          <option value="Lucas Zavatte de Santana">Lucas Zavatte de Santana</option>
+          <option value="Lucca Traversin Alc?ntara">Lucca Traversin Alc?ntara</option>
+          <option value="Luis Filipe Viana Oliveira">Luis Filipe Viana Oliveira</option>
+          <option value="Luisa de Magalh?es Brancalion">Luisa de Magalh?es Brancalion</option>
+          <option value="Luisa Miguel Ren?">Luisa Miguel Ren?</option>
+          <option value="Luisa Paredes Ferreira Dias">Luisa Paredes Ferreira Dias</option>
+          <option value="Luisa Silva Fernandez">Luisa Silva Fernandez</option>
+          <option value="Luiza Lacerda Panace">Luiza Lacerda Panace</option>
+          <option value="Luiza Moretti de Oliveira Varela Fidelis">Luiza Moretti de Oliveira Varela Fidelis</option>
+          <option value="Luiza Mosquera Gorodicht">Luiza Mosquera Gorodicht</option>
+          <option value="Luize Parola Paiva de Souza">Luize Parola Paiva de Souza</option>
+          <option value="Luma Araujo Sette Linhares de Azevedo">Luma Araujo Sette Linhares de Azevedo</option>
+          <option value="Luna Cristina Miragaia Mendes Pereira">Luna Cristina Miragaia Mendes Pereira</option>
+          <option value="Luna Moraes Stande">Luna Moraes Stande</option>
+          <option value="Lyoto Sato">Lyoto Sato</option>
+          <option value="Mait? Oliveira Conde">Mait? Oliveira Conde</option>
+          <option value="Manuella de Paula">Manuella de Paula</option>
+          <option value="Manuella Vict?ria Nascimento">Manuella Vict?ria Nascimento</option>
+          <option value="Marcela Alvarenga N?r">Marcela Alvarenga N?r</option>
+          <option value="Marcelo Henrique Lambert Santos">Marcelo Henrique Lambert Santos</option>
+          <option value="Maria Angelica de Barros Hissa Ribas">Maria Angelica de Barros Hissa Ribas</option>
+          <option value="Maria Clara Oliveira Lima">Maria Clara Oliveira Lima</option>
+          <option value="Maria Clara Sibuya Rodrigues da Silva">Maria Clara Sibuya Rodrigues da Silva</option>
+          <option value="Maria Eduarda dos Santos Cerqueira">Maria Eduarda dos Santos Cerqueira</option>
+          <option value="Maria Eduarda Ferreira Watanabe">Maria Eduarda Ferreira Watanabe</option>
+          <option value="Maria Eduarda Lima Chagas">Maria Eduarda Lima Chagas</option>
+          <option value="Maria Eduarda Macedo Mendes">Maria Eduarda Macedo Mendes</option>
+          <option value="Maria Eduarda Moraes Bueno da Silva">Maria Eduarda Moraes Bueno da Silva</option>
+          <option value="Maria Eduarda Oliveira Troetsch">Maria Eduarda Oliveira Troetsch</option>
+          <option value="Maria Em?lia Cotta Oliveira">Maria Em?lia Cotta Oliveira</option>
+          <option value="Maria Fernanda Alves Vad?">Maria Fernanda Alves Vad?</option>
+          <option value="Maria Fernanda Soares Bordini">Maria Fernanda Soares Bordini</option>
+          <option value="Maria Julia Agdo Pereira">Maria Julia Agdo Pereira</option>
+          <option value="Maria Julia Ferreira Santos">Maria Julia Ferreira Santos</option>
+          <option value="Maria Luisa Diogo de Melo Dantas">Maria Luisa Diogo de Melo Dantas</option>
+          <option value="Maria Luiza Castilho Ramos">Maria Luiza Castilho Ramos</option>
+          <option value="Maria Luiza da Silva Albach">Maria Luiza da Silva Albach</option>
+          <option value="Maria Sofia Rodrigues Barbieri">Maria Sofia Rodrigues Barbieri</option>
+          <option value="Maria Sophia Costa Maia">Maria Sophia Costa Maia</option>
+          <option value="Maria Valentina Cesar dos Santos">Maria Valentina Cesar dos Santos</option>
+          <option value="Maria Vit?ria Rodrigues Palmeira">Maria Vit?ria Rodrigues Palmeira</option>
+          <option value="Mariah Mendon?a">Mariah Mendon?a</option>
+          <option value="Mariana Cruz Silveira">Mariana Cruz Silveira</option>
+          <option value="Mariana de Oliveira da Silva Trist?o">Mariana de Oliveira da Silva Trist?o</option>
+          <option value="Mariana Hannisch de Couto">Mariana Hannisch de Couto</option>
+          <option value="Mariana Kaori Souza de Oliveira">Mariana Kaori Souza de Oliveira</option>
+          <option value="Mariana Medeiros do Nascimento">Mariana Medeiros do Nascimento</option>
+          <option value="Mariana Pinto Coelho Ferreira">Mariana Pinto Coelho Ferreira</option>
+          <option value="Mariana Ribeiro Felippe">Mariana Ribeiro Felippe</option>
+          <option value="Mariana Sousa Lisboa">Mariana Sousa Lisboa</option>
+          <option value="Mateus Silva Magalh?es">Mateus Silva Magalh?es</option>
+          <option value="Matheus Bernardes de Oliveira">Matheus Bernardes de Oliveira</option>
+          <option value="Matheus Costa Frota">Matheus Costa Frota</option>
+          <option value="Matheus Freire Teixeira Silva">Matheus Freire Teixeira Silva</option>
+          <option value="Matheus Henrique Fiorindo">Matheus Henrique Fiorindo</option>
+          <option value="Matheus Mendes Prado">Matheus Mendes Prado</option>
+          <option value="Mathias Morandi Rodrigues">Mathias Morandi Rodrigues</option>
+          <option value="Miguel de Siqueira Marques">Miguel de Siqueira Marques</option>
+          <option value="Miguel Guimar?es Vieira">Miguel Guimar?es Vieira</option>
+          <option value="Miguel Louren?o Pereira">Miguel Louren?o Pereira</option>
+          <option value="Miguel Martelo Cardoso">Miguel Martelo Cardoso</option>
+          <option value="Miguel Pelegrino Camargo">Miguel Pelegrino Camargo</option>
+          <option value="Miguel Santos de Almeida">Miguel Santos de Almeida</option>
+          <option value="Murilo Mendon?a Lazaro">Murilo Mendon?a Lazaro</option>
+          <option value="Natasha Guimar?es Foloni">Natasha Guimar?es Foloni</option>
+          <option value="Nicolas Epifanio Chagas">Nicolas Epifanio Chagas</option>
+          <option value="Nicolas Franqueira Chagas">Nicolas Franqueira Chagas</option>
+          <option value="Nicolas Moretti de Oliveira Varela Fidelis">Nicolas Moretti de Oliveira Varela Fidelis</option>
+          <option value="Nicole Bonaf? Silvestre">Nicole Bonaf? Silvestre</option>
+          <option value="Nicolly Barbosa de Melo">Nicolly Barbosa de Melo</option>
+          <option value="Nicolly Vit?ria Rosario Teles">Nicolly Vit?ria Rosario Teles</option>
+          <option value="Nina Vargas Tazbir Castro">Nina Vargas Tazbir Castro</option>
+          <option value="Octavio dos Santos Pereira da Silva">Octavio dos Santos Pereira da Silva</option>
+          <option value="Ol?via da Rocha Zambon">Ol?via da Rocha Zambon</option>
+          <option value="Pablo de Oliveira Pacheco">Pablo de Oliveira Pacheco</option>
+          <option value="Paulo Cunha Nogueira">Paulo Cunha Nogueira</option>
+          <option value="Pedro Capoville Proc?pio Faccina Berglund">Pedro Capoville Proc?pio Faccina Berglund</option>
+          <option value="Pedro Crist?falo Ara?jo">Pedro Crist?falo Ara?jo</option>
+          <option value="Pedro Diniz Ibrahim">Pedro Diniz Ibrahim</option>
+          <option value="Pedro Franco Ramirez El Alam">Pedro Franco Ramirez El Alam</option>
+          <option value="Pedro Medeiros Batista">Pedro Medeiros Batista</option>
+          <option value="Pedro Moreira de Resende">Pedro Moreira de Resende</option>
+          <option value="Pedro Oliveira Nunes">Pedro Oliveira Nunes</option>
+          <option value="Pedro Paulo Karan">Pedro Paulo Karan</option>
+          <option value="Pedro Valias Azevedo">Pedro Valias Azevedo</option>
+          <option value="Pietra Borges de Souza">Pietra Borges de Souza</option>
+          <option value="Pietro de Campos Vergal Toscano">Pietro de Campos Vergal Toscano</option>
+          <option value="Pietro Minutti Glerian">Pietro Minutti Glerian</option>
+          <option value="Pietro Zibetti Fusturath">Pietro Zibetti Fusturath</option>
+          <option value="Pyetro Rafael Almeida Frateschi">Pyetro Rafael Almeida Frateschi</option>
+          <option value="Rafael de Jesus Almeida Lopes">Rafael de Jesus Almeida Lopes</option>
+          <option value="Rafael Oliveira do Amaral">Rafael Oliveira do Amaral</option>
+          <option value="Rafael Ribeiro Arese">Rafael Ribeiro Arese</option>
+          <option value="Rafael Yudi Nawai Heidorne">Rafael Yudi Nawai Heidorne</option>
+          <option value="Rafaela Cabral de Almeida">Rafaela Cabral de Almeida</option>
+          <option value="Rafaela de Campos Sim?es">Rafaela de Campos Sim?es</option>
+          <option value="Rafaela de Santana Mello Reis">Rafaela de Santana Mello Reis</option>
+          <option value="Rafaela Santos Ribeiro">Rafaela Santos Ribeiro</option>
+          <option value="Rafaella Abreu Sousa">Rafaella Abreu Sousa</option>
+          <option value="Rafaella Souza Amaral">Rafaella Souza Amaral</option>
+          <option value="Rafhaela Passos Sandim">Rafhaela Passos Sandim</option>
+          <option value="Raphael Morais Honorato">Raphael Morais Honorato</option>
+          <option value="Rebeca Jansen Costa">Rebeca Jansen Costa</option>
+          <option value="Rian Barcos Celenza">Rian Barcos Celenza</option>
+          <option value="Rodrigo Labella de Lima">Rodrigo Labella de Lima</option>
+          <option value="Sabrina Magalh?es Alves">Sabrina Magalh?es Alves</option>
+          <option value="Samuel de Almeida Morais">Samuel de Almeida Morais</option>
+          <option value="Samuel Luiz da Motta Ant?nio">Samuel Luiz da Motta Ant?nio</option>
+          <option value="Samuel Marsi Oliveira">Samuel Marsi Oliveira</option>
+          <option value="Sara Cardoso Moreira dos Santos">Sara Cardoso Moreira dos Santos</option>
+          <option value="Sara Gabriele dos Santos">Sara Gabriele dos Santos</option>
+          <option value="Sara Scattu de Sousa">Sara Scattu de Sousa</option>
+          <option value="Sarah Cesar Massa">Sarah Cesar Massa</option>
+          <option value="Shahd Abu Hasna">Shahd Abu Hasna</option>
+          <option value="Sofia Fernandes Machado">Sofia Fernandes Machado</option>
+          <option value="Sofia Valente Caleg?o">Sofia Valente Caleg?o</option>
+          <option value="Sophia Gaia Mesquita de Paiva">Sophia Gaia Mesquita de Paiva</option>
+          <option value="Sophia Lira Nascimento da Silva">Sophia Lira Nascimento da Silva</option>
+          <option value="Stella Boschi Robles">Stella Boschi Robles</option>
+          <option value="Stephani Ferreira">Stephani Ferreira</option>
+          <option value="Ta?s Perdig?o da Rocha">Ta?s Perdig?o da Rocha</option>
+          <option value="Theo Oliveira Vazquez">Theo Oliveira Vazquez</option>
+          <option value="Thiago Ferreira Lugli">Thiago Ferreira Lugli</option>
+          <option value="Thiago Oliveira Amaro">Thiago Oliveira Amaro</option>
+          <option value="Thiago Pietro Fiorotto">Thiago Pietro Fiorotto</option>
+          <option value="Thomaz Velloso de Almeida Barbosa">Thomaz Velloso de Almeida Barbosa</option>
+          <option value="Tiago de Azevedo Ferreira Prado">Tiago de Azevedo Ferreira Prado</option>
+          <option value="Tiago Neto Rapozo">Tiago Neto Rapozo</option>
+          <option value="Tom Van Veen">Tom Van Veen</option>
+          <option value="Valentina Brasil Bennaton Usier">Valentina Brasil Bennaton Usier</option>
+          <option value="Valentina Martins Sim?es">Valentina Martins Sim?es</option>
+          <option value="Victor Afonso Losso">Victor Afonso Losso</option>
+          <option value="Victor Correia Ortega">Victor Correia Ortega</option>
+          <option value="Victor Costa Mazza">Victor Costa Mazza</option>
+          <option value="Victor de Sousa Claudio">Victor de Sousa Claudio</option>
+          <option value="Vin?cius de Souza Santos Costa">Vin?cius de Souza Santos Costa</option>
+          <option value="Vin?cius Weverton Lima Moreira">Vin?cius Weverton Lima Moreira</option>
+          <option value="Vinicius Francelli Chinellato">Vinicius Francelli Chinellato</option>
+          <option value="Vinicius Gustavo Medeiros Barbosa">Vinicius Gustavo Medeiros Barbosa</option>
+          <option value="Vinicius Lino Giacomini">Vinicius Lino Giacomini</option>
+          <option value="Vinicius Monteiro Ferreira">Vinicius Monteiro Ferreira</option>
+          <option value="Vitor Cesar de Freitas">Vitor Cesar de Freitas</option>
+          <option value="Vitor Hugo Salvador">Vitor Hugo Salvador</option>
+          <option value="Vitoria Gomes dos Santos">Vitoria Gomes dos Santos</option>
+          <option value="Yago Rafael dos Santos Almeida">Yago Rafael dos Santos Almeida</option>
+          <option value="Yasmim Camargo Monteiro">Yasmim Camargo Monteiro</option>
+          <option value="Yasmin Hutten de Queiroz">Yasmin Hutten de Queiroz</option>
+          <option value="Yasmin Oliveira Novaes">Yasmin Oliveira Novaes</option>
+          <option value="Zhu Simin">Zhu Simin</option>
+        
+        
+        </select>
+
+        <label for="email">E-mail de contato</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="aluno@exemplo.com"
+          required
+        >
+
+        <button type="submit">Pr&oacute;xima Etapa</button>
+      </form>
+    </section>
+
+    <section id="change-screen" class="card hidden">
+      <header class="card-header">
+        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
+        <h1>F&oacute;rum Humanidades 2026</h1>
+        <p class="subtitle">Etapa 1: Mudan&ccedil;a de cadastro</p>
+      </header>
+
+      <form id="change-form" class="form" novalidate>
+        <label for="registered-student-name">Aluno j&aacute; cadastrado</label>
+        <select id="registered-student-name" name="registered-student-name" required>
+          <option value="">Selecione o aluno</option>
+        </select>
+
+        <label for="registered-email">E-mail usado no cadastro</label>
+        <input
+          id="registered-email"
+          name="registered-email"
+          type="email"
+          placeholder="Digite o e-mail j&aacute; cadastrado"
+          required
+        >
+
+        <button type="submit">Pr&oacute;xima Etapa</button>
+      </form>
+    </section>
+
+    <section id="role-screen" class="card hidden">
+      <header class="card-header">
+        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
+        <h1>F&oacute;rum Humanidades 2026</h1>
+        <p id="role-subtitle" class="subtitle">Etapa 2: Escolha do cargo</p>
+      </header>
+
+      <form id="role-form" class="form" novalidate>
+        <p id="student-summary" class="info-message"></p>
+
+        <label for="role">Cargo</label>
+        <select id="role" name="role" required>
+          <option value="">Selecione o cargo</option>
+        </select>
+        <p id="role-hint" class="info-message"></p>
+
+        <div class="action-row">
+          <button id="back-to-previous-btn" type="button" class="secondary-btn">Voltar</button>
+          <button type="submit">Confirmar cadastro</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <div id="feedback-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div id="modal-content" class="modal-content">
+      <h2 id="modal-title">Mensagem</h2>
+      <p id="modal-message"></p>
+      <button id="close-modal-btn" type="button">Fechar</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+
+
