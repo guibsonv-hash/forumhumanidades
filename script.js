@@ -1,6 +1,7 @@
 const APP_PASSWORD = "univ@p.humanidades";
 const ROLE_ORDER = ["Assessor", "Deputado", "Imprensa", "Staff"];
 const UNLIMITED_ROLES = new Set(["Assessor", "Deputado"]);
+const PAIRED_ROLES = new Set(["Assessor", "Deputado"]);
 
 const accessScreen = document.getElementById("access-screen");
 const studentScreen = document.getElementById("student-screen");
@@ -37,6 +38,7 @@ const partnerSummary = document.getElementById("partner-summary");
 const partnerClassroomSelect = document.getElementById("partner-classroom");
 const partnerNameSelect = document.getElementById("partner-name");
 const partnerEmailInput = document.getElementById("partner-email");
+const commissionSelect = document.getElementById("commission");
 const backToRoleButton = document.getElementById("back-to-role-btn");
 
 const modal = document.getElementById("feedback-modal");
@@ -59,6 +61,7 @@ let modalAfterCloseAction = null;
 let supabaseClient = null;
 let isStartingFlow = false;
 let isSubmitting = false;
+let isPartnerLocked = false;
 
 function toCanonical(value) {
   return String(value || "").normalize("NFC").trim();
@@ -70,6 +73,10 @@ function normalize(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLocaleLowerCase("pt-BR");
+}
+
+function isPairedRole(role) {
+  return PAIRED_ROLES.has(role);
 }
 
 function getSupabaseConfig() {
@@ -90,12 +97,12 @@ function getSupabaseClient() {
   }
 
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
-    throw new Error("Biblioteca do Supabase não carregou. Verifique sua conexão e recarregue a página.");
+    throw new Error("Biblioteca do Supabase nao carregou. Recarregue a pagina.");
   }
 
   const { url, anonKey } = getSupabaseConfig();
   if (!url || !anonKey) {
-    throw new Error("Configuração do Supabase ausente. Preencha SUPABASE_URL e SUPABASE_ANON_KEY em config.js.");
+    throw new Error("Configuracao do Supabase ausente em config.js.");
   }
 
   supabaseClient = window.supabase.createClient(url, anonKey);
@@ -119,10 +126,6 @@ function allowedRolesForClassroom(classroom) {
   }
 
   return ["Assessor", "Deputado"];
-}
-
-function roleNeedsPartner(role) {
-  return role === "Assessor" || role === "Deputado";
 }
 
 function counterpartRole(role) {
@@ -157,6 +160,13 @@ function setAccessLoading(isLoading) {
   } else {
     accessLoading.classList.add("hidden");
   }
+}
+
+function setPartnerFieldsLocked(locked) {
+  isPartnerLocked = locked;
+  partnerClassroomSelect.disabled = locked;
+  partnerNameSelect.disabled = locked;
+  partnerEmailInput.disabled = locked;
 }
 
 function switchScreen(target) {
@@ -201,10 +211,13 @@ function resetToAccessScreen() {
   changeForm.reset();
   roleForm.reset();
   partnerForm.reset();
+  setPartnerFieldsLocked(false);
+
   flowMode = null;
   currentRegistration = null;
   pendingRole = null;
   isSubmitting = false;
+
   accessError.classList.add("hidden");
   setAccessLoading(false);
   switchScreen(accessScreen);
@@ -220,7 +233,7 @@ function applyUnavailableStudents() {
 
     const isUnavailable = unavailable.has(normalize(option.value));
     option.disabled = isUnavailable;
-    option.textContent = isUnavailable ? `${option.value} (indisponível)` : option.value;
+    option.textContent = isUnavailable ? `${option.value} (indisponivel)` : option.value;
   });
 }
 
@@ -293,7 +306,7 @@ function populatePartnerNames() {
     const isCurrentPartner = currentPartnerName && currentPartnerName === normalize(name);
     if (unavailable.has(normalize(name)) && !isCurrentPartner) {
       candidate.disabled = true;
-      candidate.textContent = `${name} (indisponível)`;
+      candidate.textContent = `${name} (indisponivel)`;
     }
 
     partnerNameSelect.appendChild(candidate);
@@ -305,7 +318,12 @@ function populatePartnerNames() {
 }
 
 function renderRoleOptions(classroom) {
-  const allowedRoles = allowedRolesForClassroom(classroom);
+  let allowedRoles = allowedRolesForClassroom(classroom);
+
+  if (flowMode === "change" && currentRegistration && isPairedRole(currentRegistration.previousRole)) {
+    allowedRoles = allowedRoles.filter((role) => isPairedRole(role));
+  }
+
   roleSelect.innerHTML = '<option value="">Selecione o cargo</option>';
 
   ROLE_ORDER.forEach((role) => {
@@ -319,7 +337,7 @@ function renderRoleOptions(classroom) {
 
     if (!UNLIMITED_ROLES.has(role) && Number(remaining || 0) <= 0) {
       option.disabled = true;
-      option.textContent = `${role} (indisponível)`;
+      option.textContent = `${role} (indisponivel)`;
     } else {
       option.textContent = `${role} (${formatRemaining(role, remaining)})`;
     }
@@ -327,10 +345,15 @@ function renderRoleOptions(classroom) {
     roleSelect.appendChild(option);
   });
 
+  if (flowMode === "change" && currentRegistration && isPairedRole(currentRegistration.previousRole)) {
+    roleHint.textContent = "Deputado/Assessor so pode alterar entre Deputado e Assessor no modo mudanca.";
+    return;
+  }
+
   roleHint.textContent =
     getSchoolYear(classroom) === "1"
-      ? "Para turmas de 1º ano, o cargo Imprensa não é permitido."
-      : "Para turmas de 2º/3º ano, o cargo Staff não é permitido.";
+      ? "Para turmas de 1o ano, o cargo Imprensa nao e permitido."
+      : "Para turmas de 2o/3o ano, o cargo Staff nao e permitido.";
 }
 
 function applyStatus(status) {
@@ -349,6 +372,7 @@ function applyStatus(status) {
       partnerName: toCanonical(entry.partnerName),
       partnerClassroom: toCanonical(entry.partnerClassroom),
       partnerRole: toCanonical(entry.partnerRole),
+      commission: toCanonical(entry.commission),
     })),
   };
 
@@ -374,10 +398,10 @@ async function callAction(rpcName, payload) {
   if (error) {
     const rawMessage = String(error.message || "");
     if (rawMessage.includes("Could not choose the best candidate function")) {
-      throw new Error("Funções RPC desatualizadas no Supabase. Execute novamente o arquivo supabase/schema.sql no SQL Editor e recarregue a página.");
+      throw new Error("Funcoes RPC desatualizadas no Supabase. Execute novamente supabase/schema.sql.");
     }
 
-    throw new Error(rawMessage || "Falha ao executar operação no Supabase.");
+    throw new Error(rawMessage || "Falha ao executar operacao no Supabase.");
   }
 
   return data;
@@ -391,7 +415,7 @@ async function startFlow(mode) {
   try {
     getSupabaseClient();
   } catch (error) {
-    openModal("error", "Configuração pendente", error.message);
+    openModal("error", "Configuracao pendente", error.message);
     return;
   }
 
@@ -413,13 +437,13 @@ async function startFlow(mode) {
       switchScreen(changeScreen);
     }
   } catch (error) {
-    openModal("error", "Erro", error.message || "Não foi possível carregar os dados.");
+    openModal("error", "Erro", error.message || "Nao foi possivel carregar os dados.");
   } finally {
     setAccessLoading(false);
   }
 }
 
-async function finalizeRegistration(role, partnerPayload) {
+async function finalizeRegistration(role, partnerPayload, commission) {
   const rpcName = flowMode === "new" ? "app_new_registration" : "app_change_registration";
 
   const result = await callAction(rpcName, {
@@ -430,6 +454,7 @@ async function finalizeRegistration(role, partnerPayload) {
     p_partner_classroom: partnerPayload?.classroom || null,
     p_partner_student_name: partnerPayload?.studentName || null,
     p_partner_email: partnerPayload?.email || null,
+    p_commission: commission || null,
   });
 
   applyStatus(result.status);
@@ -439,77 +464,93 @@ async function finalizeRegistration(role, partnerPayload) {
     return;
   }
 
-  const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudança de cadastro concluída!";
+  const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudanca de cadastro concluida!";
   const remainingText = formatRemaining(role, result.remainingForRole);
+  const commissionText = commission ? ` Comissao: ${commission}.` : "";
   const successMessage =
     flowMode === "new"
-      ? `Cargo: ${role}. Disponibilidade: ${remainingText}.`
-      : `Cadastro atualizado para ${role}. Disponibilidade: ${remainingText}.`;
+      ? `Cargo: ${role}. Disponibilidade: ${remainingText}.${commissionText}`
+      : `Cadastro atualizado para ${role}. Disponibilidade: ${remainingText}.${commissionText}`;
 
   openModal("success", successTitle, successMessage, resetToAccessScreen);
 }
 
 function openRegistrationError(result) {
   const code = String(result?.code || "");
-  const fallbackMessage = result?.message || "Não foi possível concluir a operação.";
+  const fallbackMessage = result?.message || "Nao foi possivel concluir a operacao.";
 
   if (code === "EMAIL_EXISTS") {
-    openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail para continuar.");
+    openModal("error", "E-mail ja cadastrado", "Este e-mail ja foi utilizado. Use outro e-mail.");
     return;
   }
 
   if (code === "STUDENT_EXISTS") {
-    openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
+    openModal("error", "Aluno indisponivel", "Esse aluno ja foi cadastrado e nao pode ser selecionado novamente.");
     return;
   }
 
   if (code === "EMAIL_MISMATCH") {
-    openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao cadastro do aluno.");
+    openModal("error", "E-mail divergente", "O e-mail informado nao corresponde ao cadastro do aluno.");
     return;
   }
 
   if (code === "PARTNER_REQUIRED") {
-    openModal("error", "Parceiro obrigatório", "Para Assessor/Deputado é obrigatório incluir um parceiro.");
+    openModal("error", "Parceiro obrigatorio", "Para Assessor/Deputado e obrigatorio incluir parceiro e comissao.");
+    return;
+  }
+
+  if (code === "PARTNER_LOCKED") {
+    openModal("error", "Parceiro travado", "Mudanca de cadastro de Deputado/Assessor deve manter o mesmo colega.");
+    return;
+  }
+
+  if (code === "ROLE_RESTRICTED_PAIRED") {
+    openModal("error", "Cargo bloqueado", "Deputado/Assessor nao pode mudar para Imprensa ou Staff na mudanca.");
+    return;
+  }
+
+  if (code === "INVALID_COMMISSION") {
+    openModal("error", "Comissao obrigatoria", "Escolha uma comissao valida para Deputado/Assessor.");
     return;
   }
 
   if (code === "PARTNER_SAME_STUDENT") {
-    openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente e com outro e-mail.");
+    openModal("error", "Parceiro invalido", "O parceiro deve ser um aluno diferente e com outro e-mail.");
     return;
   }
 
   if (code === "PARTNER_STUDENT_EXISTS") {
-    openModal("error", "Parceiro indisponível", "O nome do parceiro já está cadastrado no sistema.");
+    openModal("error", "Parceiro indisponivel", "O nome do parceiro ja esta cadastrado no sistema.");
     return;
   }
 
   if (code === "PARTNER_EMAIL_EXISTS") {
-    openModal("error", "E-mail do parceiro em uso", "O e-mail informado para o parceiro já está associado a outro cadastro.");
+    openModal("error", "E-mail do parceiro em uso", "O e-mail informado para o parceiro ja esta associado a outro cadastro.");
     return;
   }
 
   if (code === "PARTNER_EMAIL_MISMATCH") {
-    openModal("error", "E-mail do parceiro divergente", "O e-mail não corresponde ao nome do parceiro selecionado.");
+    openModal("error", "E-mail do parceiro divergente", "O e-mail nao corresponde ao nome do parceiro selecionado.");
     return;
   }
 
   if (code === "PARTNER_ROLE_NOT_ALLOWED") {
-    openModal("error", "Turma do parceiro inválida", "A turma escolhida não permite o cargo obrigatório do parceiro.");
+    openModal("error", "Turma do parceiro invalida", "A turma escolhida nao permite o cargo obrigatorio do parceiro.");
     return;
   }
 
   if (code === "ROLE_NOT_ALLOWED") {
-    openModal("error", "Cargo não permitido", "Esse cargo não pode ser selecionado para a turma informada.");
+    openModal("error", "Cargo nao permitido", "Esse cargo nao pode ser selecionado para a turma informada.");
     return;
   }
 
   if (code === "NO_VACANCY") {
-    openModal("error", "Sem vagas", "Não há vagas disponíveis para este cargo no momento.");
+    openModal("error", "Sem vagas", "Nao ha vagas disponiveis para este cargo no momento.");
     return;
   }
 
   if (code === "RECORD_NOT_FOUND") {
-    openModal("error", "Cadastro não encontrado", "Não localizamos esse cadastro. Verifique os dados e tente novamente.");
+    openModal("error", "Cadastro nao encontrado", "Nao localizamos esse cadastro. Verifique os dados.");
     return;
   }
 
@@ -538,17 +579,17 @@ studentForm.addEventListener("submit", (event) => {
 
   const unavailable = new Set(statusData.registeredStudents.map((name) => normalize(name)));
   if (unavailable.has(normalize(studentName))) {
-    openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
+    openModal("error", "Aluno indisponivel", "Esse aluno ja foi cadastrado e nao pode ser selecionado novamente.");
     return;
   }
 
   const usedEmails = new Set(statusData.registeredEmails.map((value) => normalize(value)));
   if (usedEmails.has(normalize(email))) {
-    openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail para continuar.");
+    openModal("error", "E-mail ja cadastrado", "Este e-mail ja foi utilizado. Use outro e-mail.");
     return;
   }
 
-  currentRegistration = { classroom, studentName, email };
+  currentRegistration = { classroom, studentName, email, previousRole: null, pairGroupId: null, commission: "" };
   roleSubtitle.textContent = "Etapa 2: Escolha do cargo";
   studentSummary.textContent = `Turma: ${classroom} | Aluno: ${studentName} | E-mail: ${email}`;
   renderRoleOptions(classroom);
@@ -562,7 +603,7 @@ changeForm.addEventListener("submit", (event) => {
   const email = toCanonical(registeredEmailInput.value);
 
   if (!studentName || !email) {
-    openModal("error", "Dados incompletos", "Selecione o aluno e informe o e-mail já cadastrado.");
+    openModal("error", "Dados incompletos", "Selecione o aluno e informe o e-mail cadastrado.");
     return;
   }
 
@@ -571,12 +612,12 @@ changeForm.addEventListener("submit", (event) => {
   );
 
   if (!entry) {
-    openModal("error", "Cadastro não encontrado", "Não foi possível localizar esse aluno nos registros.");
+    openModal("error", "Cadastro nao encontrado", "Nao foi possivel localizar esse aluno nos registros.");
     return;
   }
 
   if (normalize(entry.email) !== normalize(email)) {
-    openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao e-mail cadastrado desse aluno.");
+    openModal("error", "E-mail divergente", "O e-mail informado nao corresponde ao e-mail cadastrado desse aluno.");
     return;
   }
 
@@ -586,6 +627,7 @@ changeForm.addEventListener("submit", (event) => {
     email: entry.email,
     previousRole: entry.role,
     pairGroupId: entry.pairGroupId || null,
+    commission: entry.commission || "",
   };
 
   roleSubtitle.textContent = "Etapa 2: Escolha o novo cargo";
@@ -602,25 +644,25 @@ roleForm.addEventListener("submit", async (event) => {
   }
 
   if (!currentRegistration || !flowMode) {
-    openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
+    openModal("error", "Fluxo invalido", "Refaca o processo a partir da tela inicial.");
     resetToAccessScreen();
     return;
   }
 
   const role = toCanonical(roleSelect.value);
   if (!role) {
-    openModal("error", "Cargo obrigatório", "Selecione um cargo para finalizar.");
+    openModal("error", "Cargo obrigatorio", "Selecione um cargo para continuar.");
     return;
   }
 
   pendingRole = role;
 
-  if (!roleNeedsPartner(role)) {
+  if (!isPairedRole(role)) {
     try {
       isSubmitting = true;
-      await finalizeRegistration(role, null);
+      await finalizeRegistration(role, null, null);
     } catch (error) {
-      openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
+      openModal("error", "Erro", error.message || "Nao foi possivel comunicar com o Supabase.");
     } finally {
       isSubmitting = false;
     }
@@ -629,16 +671,31 @@ roleForm.addEventListener("submit", async (event) => {
 
   const partnerRole = counterpartRole(role);
   const currentPartner = getCurrentPairPartner();
+  const isLockedChange = flowMode === "change" && currentRegistration && isPairedRole(currentRegistration.previousRole);
 
   partnerForm.reset();
-  partnerSubtitle.textContent = `Etapa 3: Incluir ${partnerRole}`;
-  partnerSummary.textContent = `${currentRegistration.studentName} (${role}) precisa de um parceiro com cargo ${partnerRole}.`;
+  setPartnerFieldsLocked(false);
   populatePartnerNames();
 
-  if (currentPartner) {
+  partnerSubtitle.textContent = "Etapa 3: Parceiro e comissao";
+
+  if (isLockedChange) {
+    if (!currentPartner) {
+      openModal("error", "Parceiro nao encontrado", "Nao existe parceiro vinculado para este cadastro.");
+      return;
+    }
+
+    partnerSummary.textContent = `${currentRegistration.studentName} e ${currentPartner.studentName} devem permanecer juntos nesta mudanca.`;
     partnerClassroomSelect.value = currentPartner.classroom;
     partnerNameSelect.value = currentPartner.studentName;
     partnerEmailInput.value = currentPartner.email;
+    setPartnerFieldsLocked(true);
+  } else {
+    partnerSummary.textContent = `${currentRegistration.studentName} (${role}) precisa de parceiro com cargo ${partnerRole}.`;
+  }
+
+  if (flowMode === "change" && currentRegistration.commission) {
+    commissionSelect.value = currentRegistration.commission;
   }
 
   switchScreen(partnerScreen);
@@ -652,8 +709,14 @@ partnerForm.addEventListener("submit", async (event) => {
   }
 
   if (!currentRegistration || !pendingRole) {
-    openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
+    openModal("error", "Fluxo invalido", "Refaca o processo a partir da tela inicial.");
     resetToAccessScreen();
+    return;
+  }
+
+  const commission = toCanonical(commissionSelect.value);
+  if (!commission) {
+    openModal("error", "Comissao obrigatoria", "Selecione a comissao antes de finalizar.");
     return;
   }
 
@@ -666,25 +729,31 @@ partnerForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (normalize(partnerName) === normalize(currentRegistration.studentName)) {
-    openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente do cadastro principal.");
-    return;
-  }
+  if (!isPartnerLocked) {
+    if (normalize(partnerName) === normalize(currentRegistration.studentName)) {
+      openModal("error", "Parceiro invalido", "O parceiro deve ser um aluno diferente do cadastro principal.");
+      return;
+    }
 
-  if (normalize(partnerEmail) === normalize(currentRegistration.email)) {
-    openModal("error", "Parceiro inválido", "O e-mail do parceiro deve ser diferente do cadastro principal.");
-    return;
+    if (normalize(partnerEmail) === normalize(currentRegistration.email)) {
+      openModal("error", "Parceiro invalido", "O e-mail do parceiro deve ser diferente do cadastro principal.");
+      return;
+    }
   }
 
   try {
     isSubmitting = true;
-    await finalizeRegistration(pendingRole, {
-      classroom: partnerClassroom,
-      studentName: partnerName,
-      email: partnerEmail,
-    });
+    await finalizeRegistration(
+      pendingRole,
+      {
+        classroom: partnerClassroom,
+        studentName: partnerName,
+        email: partnerEmail,
+      },
+      commission
+    );
   } catch (error) {
-    openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
+    openModal("error", "Erro", error.message || "Nao foi possivel comunicar com o Supabase.");
   } finally {
     isSubmitting = false;
   }
@@ -724,6 +793,3 @@ window.addEventListener("error", (event) => {
 setAccessLoading(false);
 modal.classList.add("hidden");
 switchScreen(accessScreen);
-
-
-
