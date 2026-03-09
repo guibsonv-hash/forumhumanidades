@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>F&Oacute;RUM HUMANIDADES 2026 - Cadastro</title>
+  <title>F&Oacute;RUM HUMANIDADES 2026 - Col&eacute;gios Univap Aquarius</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="page">
     <section id="access-screen" class="card">
       <header class="card-header">
-        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
-        <h1>F&oacute;rum Humanidades 2026</h1>
+        <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
+        <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
         <p class="subtitle">Acesso de aluno</p>
       </header>
 
@@ -30,8 +30,8 @@
 
     <section id="student-screen" class="card hidden">
       <header class="card-header">
-        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
-        <h1>F&oacute;rum Humanidades 2026</h1>
+        <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
+        <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
         <p class="subtitle">Etapa 1: Dados do aluno</p>
       </header>
 
@@ -427,8 +427,8 @@
 
     <section id="change-screen" class="card hidden">
       <header class="card-header">
-        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
-        <h1>F&oacute;rum Humanidades 2026</h1>
+        <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
+        <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
         <p class="subtitle">Etapa 1: Mudan&ccedil;a de cadastro</p>
       </header>
 
@@ -447,8 +447,8 @@
 
     <section id="role-screen" class="card hidden">
       <header class="card-header">
-        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
-        <h1>F&oacute;rum Humanidades 2026</h1>
+        <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
+        <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
         <p id="role-subtitle" class="subtitle">Etapa 2: Escolha do cargo</p>
       </header>
 
@@ -470,8 +470,8 @@
 
     <section id="partner-screen" class="card hidden">
       <header class="card-header">
-        <p class="event-tag">Col&eacute;gio Univap Aquarius</p>
-        <h1>F&oacute;rum Humanidades 2026</h1>
+        <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
+        <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
         <p id="partner-subtitle" class="subtitle">Etapa 3: Cadastro do parceiro</p>
       </header>
 
@@ -501,6 +501,16 @@
         <label for="partner-email">E-mail do parceiro</label>
         <input id="partner-email" name="partner-email" type="email" placeholder="parceiro@exemplo.com" required>
 
+        <label for="commission">Comiss&atilde;o</label>
+        <select id="commission" name="commission" required>
+          <option value="">Selecione a comiss&atilde;o</option>
+          <option value="Saude">Sa&uacute;de</option>
+          <option value="Educacao">Educa&ccedil;&atilde;o</option>
+          <option value="Direitos Humanos">Direitos Humanos</option>
+          <option value="Industria, ciencia e tecnologia">Ind&uacute;stria, ci&ecirc;ncia e tecnologia</option>
+          <option value="Meio ambiente e sustentabilidade">Meio ambiente e sustentabilidade</option>
+        </select>
+
         <div class="action-row">
           <button id="back-to-role-btn" type="button" class="secondary-btn">Voltar</button>
           <button type="submit">Finalizar cadastro</button>
@@ -518,8 +528,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260308-3"></script>
-  <script src="script.js?v=20260308-3"></script>
+  <script src="config.js?v=20260309-1"></script>
+  <script src="script.js?v=20260309-1"></script>
 </body>
 </html>
+
 
