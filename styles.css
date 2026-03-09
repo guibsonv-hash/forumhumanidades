@@ -1,8 +1,12 @@
 :root {
-  --blue-dark: #0a1f44;
-  --red-dark: #8a1c28;
+  --navy-900: #081a3a;
+  --navy-800: #102a5e;
+  --navy-100: #e8eef8;
+  --red-800: #7f1127;
+  --red-700: #a41630;
   --white: #ffffff;
-  --neutral-light: #f3f5f8;
+  --slate-50: #f6f8fc;
+  --slate-200: #d8e0ef;
 }
 
 * {
@@ -13,23 +17,22 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: var(--blue-dark);
-  background: var(--white);
-  display: grid;
-  place-items: center;
-  padding: 1.25rem;
+  color: var(--navy-900);
+  background: var(--slate-50);
+  padding: 1rem;
 }
 
 .page {
   width: 100%;
-  max-width: 560px;
+  max-width: 860px;
+  margin: 0 auto;
 }
 
 .card {
   background: var(--white);
-  border: 2px solid var(--blue-dark);
-  border-radius: 16px;
-  box-shadow: 8px 8px 0 var(--blue-dark);
+  border: 1px solid var(--slate-200);
+  border-radius: 20px;
+  box-shadow: 0 14px 28px rgba(8, 26, 58, 0.14);
   overflow: hidden;
 }
 
@@ -38,39 +41,42 @@ body {
 }
 
 .card-header {
-  background: var(--blue-dark);
+  background: var(--navy-900);
   color: var(--white);
-  padding: 1.2rem 1.25rem;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 4px solid var(--red-700);
+}
+
+.brand-title {
+  margin: 0;
+  font-size: clamp(1.15rem, 3.4vw, 2rem);
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  font-weight: 900;
 }
 
 .event-tag {
-  margin: 0;
-  color: var(--white);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.card-header h1 {
-  margin: 0.35rem 0 0;
-  font-size: 1.5rem;
-  line-height: 1.2;
+  margin: 0.4rem 0 0;
+  opacity: 0.95;
+  font-weight: 600;
 }
 
 .subtitle {
-  margin: 0.35rem 0 0;
-  color: var(--white);
+  margin: 0.55rem 0 0;
+  font-weight: 600;
+  color: var(--navy-100);
 }
 
 .form {
   display: grid;
-  gap: 0.7rem;
-  padding: 1.2rem 1.25rem 1.3rem;
-  background: var(--neutral-light);
+  gap: 0.72rem;
+  padding: 1.2rem;
+  background: var(--white);
 }
 
 label {
   font-weight: 700;
-  color: var(--blue-dark);
+  color: var(--navy-900);
 }
 
 input,
@@ -82,89 +88,90 @@ button {
 input,
 select {
   width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--blue-dark);
-  border-radius: 10px;
+  padding: 0.78rem 0.85rem;
+  border: 1.5px solid #b9c7df;
+  border-radius: 12px;
   background: var(--white);
-  color: var(--blue-dark);
+  color: var(--navy-900);
 }
 
 input:focus,
 select:focus,
 button:focus {
-  outline: 3px solid var(--red-dark);
-  outline-offset: 1px;
+  outline: 3px solid rgba(164, 22, 48, 0.28);
+  border-color: var(--red-700);
 }
 
 .error-message {
   margin: 0.1rem 0 0;
-  color: var(--red-dark);
+  color: var(--red-700);
   font-weight: 700;
 }
 
 .info-message {
   margin: 0.1rem 0 0;
-  color: var(--blue-dark);
+  color: var(--navy-800);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 button[type="submit"] {
-  margin-top: 0.55rem;
+  margin-top: 0.58rem;
   border: 0;
-  border-radius: 10px;
-  padding: 0.9rem;
+  border-radius: 12px;
+  padding: 0.92rem;
   font-weight: 800;
   color: var(--white);
-  background: var(--red-dark);
+  background: var(--red-700);
   cursor: pointer;
 }
 
 button[type="submit"]:hover,
 .primary-btn:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.05);
+}
+
+button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
 }
 
 .secondary-btn {
-  border: 2px solid var(--blue-dark);
-  border-radius: 10px;
+  border: 1.5px solid var(--navy-800);
+  border-radius: 12px;
   padding: 0.9rem;
   font-weight: 700;
-  color: var(--blue-dark);
+  color: var(--navy-800);
   background: var(--white);
   cursor: pointer;
 }
 
 .secondary-btn:hover {
-  background: #e8edf5;
+  background: #f2f6fd;
 }
 
 .primary-btn {
   border: 0;
-  border-radius: 10px;
-  padding: 1rem;
+  border-radius: 12px;
+  padding: 0.98rem;
   font-weight: 800;
   color: var(--white);
-  background: var(--red-dark);
+  background: var(--red-700);
   cursor: pointer;
 }
 
 .mode-row {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 0.6rem;
-  margin-top: 0.4rem;
-}
-
-.mode-row .secondary-btn {
-  padding: 0.9rem;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 0.65rem;
+  margin-top: 0.42rem;
 }
 
 .action-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-  margin-top: 0.55rem;
+  gap: 0.62rem;
+  margin-top: 0.56rem;
 }
 
 .action-row button[type="submit"] {
@@ -174,7 +181,7 @@ button[type="submit"]:hover,
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(10, 31, 68, 0.5);
+  background: rgba(8, 26, 58, 0.58);
   display: grid;
   place-items: center;
   padding: 1rem;
@@ -185,48 +192,72 @@ button[type="submit"]:hover,
 }
 
 .modal-content {
-  width: min(100%, 420px);
+  width: min(100%, 460px);
   background: var(--white);
-  border: 3px solid var(--blue-dark);
-  border-radius: 14px;
-  padding: 1.1rem;
+  border: 2px solid var(--navy-800);
+  border-radius: 16px;
+  padding: 1.15rem;
   text-align: center;
+  box-shadow: 0 12px 26px rgba(8, 26, 58, 0.24);
 }
 
 .modal-content.modal-error {
-  border-color: var(--red-dark);
+  border-color: var(--red-700);
 }
 
 .modal-content h2 {
   margin-top: 0;
-  color: var(--blue-dark);
+  color: var(--navy-900);
 }
 
 #modal-message {
-  color: var(--blue-dark);
+  color: var(--navy-900);
+  line-height: 1.4;
 }
 
 #close-modal-btn {
   border: 0;
   border-radius: 10px;
-  padding: 0.7rem 1rem;
+  padding: 0.72rem 1rem;
   color: var(--white);
-  background: var(--blue-dark);
+  background: var(--navy-900);
   font-weight: 700;
   cursor: pointer;
 }
 
-@media (max-width: 480px) {
+@media (min-width: 900px) {
+  body {
+    padding: 2rem 1.2rem;
+  }
+
   .card {
-    box-shadow: 6px 6px 0 var(--blue-dark);
+    border-radius: 24px;
   }
 
-  .card-header h1 {
-    font-size: 1.25rem;
+  .card-header {
+    padding: 1.6rem 1.8rem 1.2rem;
   }
 
-  .action-row,
-  .mode-row {
+  .form {
+    padding: 1.4rem 1.8rem 1.6rem;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    padding: 0.7rem;
+  }
+
+  .mode-row,
+  .action-row {
     grid-template-columns: 1fr;
+  }
+
+  .form {
+    padding: 1rem;
+  }
+
+  .card-header {
+    padding: 1rem 1rem 0.9rem;
   }
 }
