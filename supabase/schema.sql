@@ -7,15 +7,19 @@ create table if not exists public.forum_registrations (
   role text not null check (role in ('Assessor', 'Deputado', 'Imprensa', 'Staff')),
   email text not null unique,
   pair_group_id uuid null,
+  partner_name text null,
+  partner_classroom text null,
+  partner_role text null,
+  commission text null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.forum_registrations add column if not exists pair_group_id uuid;
-
 alter table public.forum_registrations add column if not exists partner_name text;
 alter table public.forum_registrations add column if not exists partner_classroom text;
 alter table public.forum_registrations add column if not exists partner_role text;
+alter table public.forum_registrations add column if not exists commission text;
 
 create or replace function public.forum_allowed_roles(p_classroom text)
 returns text[]
@@ -53,6 +57,20 @@ as $$
   end;
 $$;
 
+create or replace function public.forum_is_valid_commission(p_commission text)
+returns boolean
+language sql
+immutable
+as $$
+  select trim(coalesce(p_commission, '')) in (
+    'Saude',
+    'Educacao',
+    'Direitos Humanos',
+    'Industria, ciencia e tecnologia',
+    'Meio ambiente e sustentabilidade'
+  );
+$$;
+
 create or replace function public.forum_sync_partner_columns()
 returns void
 language plpgsql
@@ -63,7 +81,8 @@ begin
   update public.forum_registrations f
   set partner_name = p.student_name,
       partner_classroom = p.classroom,
-      partner_role = p.role
+      partner_role = p.role,
+      updated_at = now()
   from public.forum_registrations p
   where f.pair_group_id is not null
     and p.pair_group_id = f.pair_group_id
@@ -72,7 +91,9 @@ begin
   update public.forum_registrations f
   set partner_name = null,
       partner_classroom = null,
-      partner_role = null
+      partner_role = null,
+      commission = case when role in ('Assessor', 'Deputado') then commission else null end,
+      updated_at = now()
   where f.pair_group_id is null
      or not exists (
        select 1
@@ -122,7 +143,8 @@ as $$
           'pairGroupId', pair_group_id,
           'partnerName', partner_name,
           'partnerClassroom', partner_classroom,
-          'partnerRole', partner_role
+          'partnerRole', partner_role,
+          'commission', commission
         ) order by student_name
       )
       from public.forum_registrations
@@ -131,7 +153,12 @@ as $$
 $$;
 
 drop function if exists public.app_new_registration(text, text, text, text);
+drop function if exists public.app_new_registration(text, text, text, text, text, text, text);
+drop function if exists public.app_new_registration(text, text, text, text, text, text, text, text);
 drop function if exists public.app_change_registration(text, text, text, text);
+drop function if exists public.app_change_registration(text, text, text, text, text, text, text);
+drop function if exists public.app_change_registration(text, text, text, text, text, text, text, text);
+
 create or replace function public.app_new_registration(
   p_classroom text,
   p_student_name text,
@@ -139,7 +166,8 @@ create or replace function public.app_new_registration(
   p_role text,
   p_partner_classroom text default null,
   p_partner_student_name text default null,
-  p_partner_email text default null
+  p_partner_email text default null,
+  p_commission text default null
 )
 returns jsonb
 language plpgsql
@@ -157,6 +185,8 @@ declare
   v_partner_email text := trim(coalesce(p_partner_email, ''));
   v_partner_role text;
 
+  v_commission text := trim(coalesce(p_commission, ''));
+
   v_allowed_roles text[];
   v_allowed_partner_roles text[];
   v_limit int;
@@ -173,25 +203,29 @@ begin
   end if;
 
   if v_role not in ('Assessor', 'Deputado', 'Imprensa', 'Staff') then
-    return jsonb_build_object('ok', false, 'code', 'ROLE_INVALID', 'message', 'Cargo inválido.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'ROLE_INVALID', 'message', 'Cargo invalido.', 'status', public.app_get_status());
   end if;
 
   v_allowed_roles := public.forum_allowed_roles(v_classroom);
   if not (v_role = any(v_allowed_roles)) then
-    return jsonb_build_object('ok', false, 'code', 'ROLE_NOT_ALLOWED', 'message', 'Cargo não permitido para a turma selecionada.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'ROLE_NOT_ALLOWED', 'message', 'Cargo nao permitido para a turma selecionada.', 'status', public.app_get_status());
   end if;
 
   if exists(select 1 from public.forum_registrations where lower(student_name) = lower(v_student)) then
-    return jsonb_build_object('ok', false, 'code', 'STUDENT_EXISTS', 'message', 'Aluno já cadastrado.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'STUDENT_EXISTS', 'message', 'Aluno ja cadastrado.', 'status', public.app_get_status());
   end if;
 
   if exists(select 1 from public.forum_registrations where lower(email) = lower(v_email)) then
-    return jsonb_build_object('ok', false, 'code', 'EMAIL_EXISTS', 'message', 'E-mail já cadastrado.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'EMAIL_EXISTS', 'message', 'E-mail ja cadastrado.', 'status', public.app_get_status());
   end if;
 
   if v_role in ('Assessor', 'Deputado') then
     if v_partner_classroom = '' or v_partner_student = '' or v_partner_email = '' then
-      return jsonb_build_object('ok', false, 'code', 'PARTNER_REQUIRED', 'message', 'Assessor e Deputado exigem cadastro de parceiro.', 'status', public.app_get_status());
+      return jsonb_build_object('ok', false, 'code', 'PARTNER_REQUIRED', 'message', 'Assessor e Deputado exigem parceiro.', 'status', public.app_get_status());
+    end if;
+
+    if not public.forum_is_valid_commission(v_commission) then
+      return jsonb_build_object('ok', false, 'code', 'INVALID_COMMISSION', 'message', 'Comissao invalida.', 'status', public.app_get_status());
     end if;
 
     if lower(v_partner_student) = lower(v_student) or lower(v_partner_email) = lower(v_email) then
@@ -199,32 +233,34 @@ begin
     end if;
 
     if exists(select 1 from public.forum_registrations where lower(student_name) = lower(v_partner_student)) then
-      return jsonb_build_object('ok', false, 'code', 'PARTNER_STUDENT_EXISTS', 'message', 'Nome do parceiro já cadastrado.', 'status', public.app_get_status());
+      return jsonb_build_object('ok', false, 'code', 'PARTNER_STUDENT_EXISTS', 'message', 'Nome do parceiro ja cadastrado.', 'status', public.app_get_status());
     end if;
 
     if exists(select 1 from public.forum_registrations where lower(email) = lower(v_partner_email)) then
-      return jsonb_build_object('ok', false, 'code', 'PARTNER_EMAIL_EXISTS', 'message', 'E-mail do parceiro já cadastrado.', 'status', public.app_get_status());
+      return jsonb_build_object('ok', false, 'code', 'PARTNER_EMAIL_EXISTS', 'message', 'E-mail do parceiro ja cadastrado.', 'status', public.app_get_status());
     end if;
 
     v_partner_role := public.forum_counterpart_role(v_role);
     v_allowed_partner_roles := public.forum_allowed_roles(v_partner_classroom);
 
     if not (v_partner_role = any(v_allowed_partner_roles)) then
-      return jsonb_build_object('ok', false, 'code', 'PARTNER_ROLE_NOT_ALLOWED', 'message', 'Cargo do parceiro não permitido para a turma informada.', 'status', public.app_get_status());
+      return jsonb_build_object('ok', false, 'code', 'PARTNER_ROLE_NOT_ALLOWED', 'message', 'Cargo do parceiro nao permitido para a turma informada.', 'status', public.app_get_status());
     end if;
+  else
+    v_commission := null;
   end if;
 
   v_limit := public.forum_role_limit(v_role);
   select count(*)::int into v_used from public.forum_registrations where role = v_role;
   if v_limit is not null and v_used >= v_limit then
-    return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Esse cargo não possui vagas.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Esse cargo nao possui vagas.', 'status', public.app_get_status());
   end if;
 
   if v_role in ('Assessor', 'Deputado') then
     v_partner_limit := public.forum_role_limit(v_partner_role);
     select count(*)::int into v_partner_used from public.forum_registrations where role = v_partner_role;
     if v_partner_limit is not null and v_partner_used >= v_partner_limit then
-      return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Cargo do parceiro sem vagas disponíveis.', 'status', public.app_get_status());
+      return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Cargo do parceiro sem vagas.', 'status', public.app_get_status());
     end if;
   end if;
 
@@ -234,12 +270,12 @@ begin
     v_pair_id := null;
   end if;
 
-  insert into public.forum_registrations (classroom, student_name, role, email, pair_group_id)
-  values (v_classroom, v_student, v_role, v_email, v_pair_id);
+  insert into public.forum_registrations (classroom, student_name, role, email, pair_group_id, commission)
+  values (v_classroom, v_student, v_role, v_email, v_pair_id, v_commission);
 
   if v_role in ('Assessor', 'Deputado') then
-    insert into public.forum_registrations (classroom, student_name, role, email, pair_group_id)
-    values (v_partner_classroom, v_partner_student, v_partner_role, v_partner_email, v_pair_id);
+    insert into public.forum_registrations (classroom, student_name, role, email, pair_group_id, commission)
+    values (v_partner_classroom, v_partner_student, v_partner_role, v_partner_email, v_pair_id, v_commission);
   end if;
 
   perform public.forum_sync_partner_columns();
@@ -262,7 +298,8 @@ create or replace function public.app_change_registration(
   p_role text,
   p_partner_classroom text default null,
   p_partner_student_name text default null,
-  p_partner_email text default null
+  p_partner_email text default null,
+  p_commission text default null
 )
 returns jsonb
 language plpgsql
@@ -278,6 +315,8 @@ declare
   v_partner_student text := trim(coalesce(p_partner_student_name, ''));
   v_partner_email text := trim(coalesce(p_partner_email, ''));
   v_partner_role text;
+
+  v_commission text := trim(coalesce(p_commission, ''));
 
   v_current public.forum_registrations%rowtype;
   v_partner public.forum_registrations%rowtype;
@@ -304,7 +343,7 @@ begin
 
   select * into v_current from public.forum_registrations where lower(student_name) = lower(v_student) limit 1;
   if not found then
-    return jsonb_build_object('ok', false, 'code', 'RECORD_NOT_FOUND', 'message', 'Aluno não encontrado.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'RECORD_NOT_FOUND', 'message', 'Aluno nao encontrado.', 'status', public.app_get_status());
   end if;
 
   if lower(v_current.email) <> lower(v_email) then
@@ -312,12 +351,16 @@ begin
   end if;
 
   if v_new_role not in ('Assessor', 'Deputado', 'Imprensa', 'Staff') then
-    return jsonb_build_object('ok', false, 'code', 'ROLE_INVALID', 'message', 'Cargo inválido.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'ROLE_INVALID', 'message', 'Cargo invalido.', 'status', public.app_get_status());
+  end if;
+
+  if v_current.role in ('Assessor', 'Deputado') and v_new_role not in ('Assessor', 'Deputado') then
+    return jsonb_build_object('ok', false, 'code', 'ROLE_RESTRICTED_PAIRED', 'message', 'Deputado/Assessor nao pode mudar para Imprensa ou Staff.', 'status', public.app_get_status());
   end if;
 
   v_allowed_roles := public.forum_allowed_roles(v_current.classroom);
   if not (v_new_role = any(v_allowed_roles)) then
-    return jsonb_build_object('ok', false, 'code', 'ROLE_NOT_ALLOWED', 'message', 'Cargo não permitido para a turma do aluno.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'ROLE_NOT_ALLOWED', 'message', 'Cargo nao permitido para a turma do aluno.', 'status', public.app_get_status());
   end if;
 
   v_old_pair := v_current.pair_group_id;
@@ -325,51 +368,61 @@ begin
   v_limit := public.forum_role_limit(v_new_role);
   select count(*)::int into v_used from public.forum_registrations where role = v_new_role;
   if v_limit is not null and v_current.role <> v_new_role and v_used >= v_limit then
-    return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Não há vagas para o novo cargo.', 'status', public.app_get_status());
+    return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Nao ha vagas para o novo cargo.', 'status', public.app_get_status());
   end if;
 
   if v_new_role in ('Assessor', 'Deputado') then
-    if v_partner_classroom = '' or v_partner_student = '' or v_partner_email = '' then
-      return jsonb_build_object('ok', false, 'code', 'PARTNER_REQUIRED', 'message', 'Assessor e Deputado exigem cadastro de parceiro.', 'status', public.app_get_status());
-    end if;
-
-    if lower(v_partner_student) = lower(v_current.student_name) or lower(v_partner_email) = lower(v_current.email) then
-      return jsonb_build_object('ok', false, 'code', 'PARTNER_SAME_STUDENT', 'message', 'Parceiro deve ser um aluno diferente.', 'status', public.app_get_status());
+    if not public.forum_is_valid_commission(v_commission) then
+      return jsonb_build_object('ok', false, 'code', 'INVALID_COMMISSION', 'message', 'Comissao invalida.', 'status', public.app_get_status());
     end if;
 
     v_partner_role := public.forum_counterpart_role(v_new_role);
-    v_allowed_partner_roles := public.forum_allowed_roles(v_partner_classroom);
 
-    if not (v_partner_role = any(v_allowed_partner_roles)) then
-      return jsonb_build_object('ok', false, 'code', 'PARTNER_ROLE_NOT_ALLOWED', 'message', 'Cargo do parceiro não permitido para a turma informada.', 'status', public.app_get_status());
-    end if;
+    if v_current.role in ('Assessor', 'Deputado') then
+      select *
+      into v_partner
+      from public.forum_registrations
+      where pair_group_id = v_current.pair_group_id
+        and id <> v_current.id
+      limit 1;
 
-    select * into v_partner from public.forum_registrations where lower(student_name) = lower(v_partner_student) limit 1;
-    v_partner_exists := found;
+      if not found then
+        return jsonb_build_object('ok', false, 'code', 'PARTNER_REQUIRED', 'message', 'Cadastro atrelado sem parceiro valido.', 'status', public.app_get_status());
+      end if;
 
-    if v_partner_exists then
-      if v_partner.id = v_current.id then
+      if (v_partner_student <> '' and lower(v_partner.student_name) <> lower(v_partner_student))
+         or (v_partner_email <> '' and lower(v_partner.email) <> lower(v_partner_email)) then
+        return jsonb_build_object('ok', false, 'code', 'PARTNER_LOCKED', 'message', 'Nao e permitido trocar parceiro nesse tipo de mudanca.', 'status', public.app_get_status());
+      end if;
+
+      v_partner_exists := true;
+      v_partner_classroom := v_partner.classroom;
+      v_partner_student := v_partner.student_name;
+      v_partner_email := v_partner.email;
+      v_partner_old_pair := v_partner.pair_group_id;
+    else
+      if v_partner_classroom = '' or v_partner_student = '' or v_partner_email = '' then
+        return jsonb_build_object('ok', false, 'code', 'PARTNER_REQUIRED', 'message', 'Assessor e Deputado exigem parceiro.', 'status', public.app_get_status());
+      end if;
+
+      if lower(v_partner_student) = lower(v_current.student_name) or lower(v_partner_email) = lower(v_current.email) then
         return jsonb_build_object('ok', false, 'code', 'PARTNER_SAME_STUDENT', 'message', 'Parceiro deve ser um aluno diferente.', 'status', public.app_get_status());
       end if;
 
-      if v_current.pair_group_id is null
-         or v_partner.pair_group_id is null
-         or v_partner.pair_group_id <> v_current.pair_group_id then
-        return jsonb_build_object('ok', false, 'code', 'PARTNER_STUDENT_EXISTS', 'message', 'Nome do parceiro ja cadastrado para outro cadastro.', 'status', public.app_get_status());
+      v_allowed_partner_roles := public.forum_allowed_roles(v_partner_classroom);
+      if not (v_partner_role = any(v_allowed_partner_roles)) then
+        return jsonb_build_object('ok', false, 'code', 'PARTNER_ROLE_NOT_ALLOWED', 'message', 'Cargo do parceiro nao permitido para a turma informada.', 'status', public.app_get_status());
       end if;
 
-      if lower(v_partner.email) <> lower(v_partner_email) then
-        return jsonb_build_object('ok', false, 'code', 'PARTNER_EMAIL_MISMATCH', 'message', 'E-mail do parceiro divergente para o nome informado.', 'status', public.app_get_status());
+      select * into v_partner from public.forum_registrations where lower(student_name) = lower(v_partner_student) limit 1;
+      v_partner_exists := found;
+
+      if v_partner_exists then
+        return jsonb_build_object('ok', false, 'code', 'PARTNER_STUDENT_EXISTS', 'message', 'Nome do parceiro ja cadastrado.', 'status', public.app_get_status());
       end if;
 
-      if exists(select 1 from public.forum_registrations where lower(email) = lower(v_partner_email) and id <> v_partner.id) then
-        return jsonb_build_object('ok', false, 'code', 'PARTNER_EMAIL_EXISTS', 'message', 'E-mail do parceiro já está associado a outro cadastro.', 'status', public.app_get_status());
-      end if;
-
-      v_partner_old_pair := v_partner.pair_group_id;
-    else
       if exists(select 1 from public.forum_registrations where lower(email) = lower(v_partner_email)) then
-        return jsonb_build_object('ok', false, 'code', 'PARTNER_EMAIL_EXISTS', 'message', 'E-mail do parceiro já cadastrado.', 'status', public.app_get_status());
+        return jsonb_build_object('ok', false, 'code', 'PARTNER_EMAIL_EXISTS', 'message', 'E-mail do parceiro ja cadastrado.', 'status', public.app_get_status());
       end if;
 
       v_partner_old_pair := null;
@@ -382,15 +435,16 @@ begin
       if v_partner_exists and v_partner.role = v_partner_role then
         null;
       elsif v_partner_used >= v_partner_limit then
-        return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Cargo do parceiro sem vagas disponíveis.', 'status', public.app_get_status());
+        return jsonb_build_object('ok', false, 'code', 'NO_VACANCY', 'message', 'Cargo do parceiro sem vagas.', 'status', public.app_get_status());
       end if;
     end if;
 
-    v_new_pair := gen_random_uuid();
+    v_new_pair := coalesce(v_current.pair_group_id, gen_random_uuid());
 
     update public.forum_registrations
     set role = v_new_role,
         pair_group_id = v_new_pair,
+        commission = v_commission,
         updated_at = now()
     where id = v_current.id;
 
@@ -400,16 +454,18 @@ begin
           role = v_partner_role,
           email = v_partner_email,
           pair_group_id = v_new_pair,
+          commission = v_commission,
           updated_at = now()
       where id = v_partner.id;
     else
-      insert into public.forum_registrations (classroom, student_name, role, email, pair_group_id)
-      values (v_partner_classroom, v_partner_student, v_partner_role, v_partner_email, v_new_pair);
+      insert into public.forum_registrations (classroom, student_name, role, email, pair_group_id, commission)
+      values (v_partner_classroom, v_partner_student, v_partner_role, v_partner_email, v_new_pair, v_commission);
     end if;
 
     if v_old_pair is not null then
       update public.forum_registrations
       set pair_group_id = null,
+          commission = case when role in ('Assessor', 'Deputado') then commission else null end,
           updated_at = now()
       where pair_group_id = v_old_pair
         and id <> v_current.id
@@ -419,6 +475,7 @@ begin
     if v_partner_old_pair is not null and v_partner_old_pair <> v_old_pair then
       update public.forum_registrations
       set pair_group_id = null,
+          commission = case when role in ('Assessor', 'Deputado') then commission else null end,
           updated_at = now()
       where pair_group_id = v_partner_old_pair
         and id <> v_current.id
@@ -428,12 +485,14 @@ begin
     update public.forum_registrations
     set role = v_new_role,
         pair_group_id = null,
+        commission = null,
         updated_at = now()
     where id = v_current.id;
 
     if v_old_pair is not null then
       update public.forum_registrations
       set pair_group_id = null,
+          commission = case when role in ('Assessor', 'Deputado') then commission else null end,
           updated_at = now()
       where pair_group_id = v_old_pair
         and id <> v_current.id;
@@ -460,16 +519,10 @@ alter table public.forum_registrations enable row level security;
 revoke all on public.forum_registrations from anon, authenticated;
 grant usage on schema public to anon, authenticated;
 grant execute on function public.app_get_status() to anon, authenticated;
-grant execute on function public.app_new_registration(text, text, text, text, text, text, text) to anon, authenticated;
-grant execute on function public.app_change_registration(text, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.app_new_registration(text, text, text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.app_change_registration(text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.forum_allowed_roles(text) to anon, authenticated;
 grant execute on function public.forum_role_limit(text) to anon, authenticated;
 grant execute on function public.forum_counterpart_role(text) to anon, authenticated;
+grant execute on function public.forum_is_valid_commission(text) to anon, authenticated;
 grant execute on function public.forum_sync_partner_columns() to anon, authenticated;
-
-
-
-
-
-
-
