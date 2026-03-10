@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>F&Oacute;RUM HUMANIDADES 2026 - Col&eacute;gios Univap Aquarius</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260310-4">
 </head>
 <body>
   <main class="page">
@@ -12,11 +12,11 @@
       <header class="card-header">
         <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
         <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
-        <p class="subtitle">Inscrição de Aluno(a)</p>
+        <p class="subtitle">Inscri&ccedil;&atilde;o de Aluno(a)</p>
       </header>
 
       <form id="access-form" class="form" novalidate>
-        <label for="student-password">Senha de aluno (Se não souber, solicite a senha com seu professor!)</label>
+        <label for="student-password">Senha de aluno (Se n&atilde;o souber, solicite a senha com seu professor!)</label>
         <input id="student-password" name="student-password" type="password" placeholder="Digite a senha de acesso" required>
         <p id="access-error" class="error-message hidden" aria-live="polite">Senha inv&aacute;lida.</p>
         <p id="access-loading" class="info-message hidden" aria-live="polite">Carregando dados do sistema...</p>
@@ -100,6 +100,7 @@
           <option value="Beatriz Arce Vieira Peres">Beatriz Arce Vieira Peres</option>
           <option value="Beatriz Fernandes dos Santos">Beatriz Fernandes dos Santos</option>
           <option value="Beatriz Marini Lopes">Beatriz Marini Lopes</option>
+          <option value="Beatriz Martins Bizzaria">Beatriz Martins Bizzaria</option>
           <option value="Beatriz Mendon&ccedil;a Teixeira">Beatriz Mendon&ccedil;a Teixeira</option>
           <option value="Bianca Dalprat de Oliveira Silva">Bianca Dalprat de Oliveira Silva</option>
           <option value="Bianca Leandro Marcelino">Bianca Leandro Marcelino</option>
@@ -286,6 +287,7 @@
           <option value="Marcela Alvarenga N&oacute;r">Marcela Alvarenga N&oacute;r</option>
           <option value="Marcelo Henrique Lambert Santos">Marcelo Henrique Lambert Santos</option>
           <option value="Maria Angelica de Barros Hissa Ribas">Maria Angelica de Barros Hissa Ribas</option>
+          <option value="Maria Anahi dos Reis Abib">Maria Anahi dos Reis Abib</option>
           <option value="Maria Clara Oliveira Lima">Maria Clara Oliveira Lima</option>
           <option value="Maria Clara Sibuya Rodrigues da Silva">Maria Clara Sibuya Rodrigues da Silva</option>
           <option value="Maria Eduarda dos Santos Cerqueira">Maria Eduarda dos Santos Cerqueira</option>
@@ -372,6 +374,7 @@
           <option value="Rodrigo Labella de Lima">Rodrigo Labella de Lima</option>
           <option value="Sabrina Magalh&atilde;es Alves">Sabrina Magalh&atilde;es Alves</option>
           <option value="Samuel de Almeida Morais">Samuel de Almeida Morais</option>
+          <option value="Samuel de Oliveira Lima">Samuel de Oliveira Lima</option>
           <option value="Samuel Luiz da Motta Ant&ocirc;nio">Samuel Luiz da Motta Ant&ocirc;nio</option>
           <option value="Samuel Marsi Oliveira">Samuel Marsi Oliveira</option>
           <option value="Sara Cardoso Moreira dos Santos">Sara Cardoso Moreira dos Santos</option>
@@ -504,11 +507,12 @@
         <label for="commission">Comiss&atilde;o</label>
         <select id="commission" name="commission" required>
           <option value="">Selecione a comiss&atilde;o</option>
-          <option value="Saude">Sa&uacute;de</option>
-          <option value="Educacao">Educa&ccedil;&atilde;o</option>
+          <option value="Sa&uacute;de">Sa&uacute;de</option>
+          <option value="Educa&ccedil;&atilde;o">Educa&ccedil;&atilde;o</option>
           <option value="Direitos Humanos">Direitos Humanos</option>
-          <option value="Industria, ciencia e tecnologia">Ind&uacute;stria, ci&ecirc;ncia e tecnologia</option>
+          <option value="Ind&uacute;stria, ci&ecirc;ncia e tecnologia">Ind&uacute;stria, ci&ecirc;ncia e tecnologia</option>
           <option value="Meio ambiente e sustentabilidade">Meio ambiente e sustentabilidade</option>
+          <option value="Seguran&ccedil;a P&uacute;blica">Seguran&ccedil;a P&uacute;blica</option>
         </select>
 
         <div class="action-row">
@@ -517,7 +521,59 @@
         </div>
       </form>
     </section>
+
+    <section id="report-screen" class="card hidden">
+      <header class="card-header">
+        <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
+        <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
+        <p class="subtitle">&Aacute;rea do professor: relat&oacute;rios</p>
+      </header>
+
+      <form id="report-form" class="form" novalidate>
+        <p id="report-summary" class="info-message">Gere relat&oacute;rios em PDF com filtros e vis&atilde;o completa dos cadastros.</p>
+
+        <label for="report-type">Tipo de relat&oacute;rio</label>
+        <select id="report-type" name="report-type" required>
+          <option value="registered">Relat&oacute;rio de Cadastrados</option>
+          <option value="not-registered">Relat&oacute;rio de N&atilde;o Inscritos</option>
+          <option value="partners">Relat&oacute;rio de Parceiros</option>
+          <option value="vacancies">Relat&oacute;rio de Vagas</option>
+        </select>
+
+        <div id="report-filters" class="filters-grid">
+          <div>
+            <label for="report-classroom">Filtrar por turma</label>
+            <select id="report-classroom" name="report-classroom">
+              <option value="all">Todas</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="report-role">Filtrar por cargo</label>
+            <select id="report-role" name="report-role">
+              <option value="all">Todos</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="report-commission">Filtrar por comiss&atilde;o</label>
+            <select id="report-commission" name="report-commission">
+              <option value="all">Todas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button id="report-back-btn" type="button" class="secondary-btn">Sair</button>
+          <button id="report-generate-btn" type="submit">Gerar PDF</button>
+        </div>
+      </form>
+    </section>
   </main>
+
+  <footer class="page-footer">
+    Plataforma de uso exclusivo dos Col&eacute;gios Univap Aquarius - Desenvolvida e mantida pelo professor Guibson Valerio
+  </footer>
 
   <div id="feedback-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div id="modal-content" class="modal-content">
@@ -528,10 +584,22 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260309-1"></script>
-  <script src="script.js?v=20260309-1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="config.js?v=20260310-5"></script>
+  <script src="script.js?v=20260310-5"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
 
 
 
