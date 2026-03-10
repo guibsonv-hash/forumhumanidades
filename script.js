@@ -1,7 +1,33 @@
 const APP_PASSWORD = "univ@p.humanidades";
+const PROFESSOR_SECRET_CODES = Object.freeze([97, 47, 104, 74, 52, 112, 110, 126, 47, 41, 68, 36, 110, 93, 127, 52, 99, 77, 53, 102, 110]);
+const PROFESSOR_SECRET_MASK = Object.freeze([17, 93, 7, 44, 81, 3, 29]);
+
 const ROLE_ORDER = ["Assessor", "Deputado", "Imprensa", "Staff"];
 const UNLIMITED_ROLES = new Set(["Assessor", "Deputado"]);
 const PAIRED_ROLES = new Set(["Assessor", "Deputado"]);
+const LIMITED_ROLE_MAX = Object.freeze({
+  Staff: 30,
+  Imprensa: 30,
+  Assessor: null,
+  Deputado: null,
+});
+const COMMISSION_OPTIONS = Object.freeze([
+  "Saúde",
+  "Educação",
+  "Direitos Humanos",
+  "Indústria, ciência e tecnologia",
+  "Meio ambiente e sustentabilidade",
+  "Segurança Pública",
+]);
+const COMMISSION_CANONICAL = Object.freeze({
+  "saude": "Saúde",
+  "educacao": "Educação",
+  "direitos humanos": "Direitos Humanos",
+  "industria, ciencia e tecnologia": "Indústria, ciência e tecnologia",
+  "meio ambiente e sustentabilidade": "Meio ambiente e sustentabilidade",
+  "seguranca publica": "Segurança Pública",
+});
+
 
 const accessScreen = document.getElementById("access-screen");
 const studentScreen = document.getElementById("student-screen");
@@ -41,6 +67,17 @@ const partnerEmailInput = document.getElementById("partner-email");
 const commissionSelect = document.getElementById("commission");
 const backToRoleButton = document.getElementById("back-to-role-btn");
 
+const reportScreen = document.getElementById("report-screen");
+const reportForm = document.getElementById("report-form");
+const reportTypeSelect = document.getElementById("report-type");
+const reportFilters = document.getElementById("report-filters");
+const reportClassroomSelect = document.getElementById("report-classroom");
+const reportRoleSelect = document.getElementById("report-role");
+const reportCommissionSelect = document.getElementById("report-commission");
+const reportSummary = document.getElementById("report-summary");
+const reportBackButton = document.getElementById("report-back-btn");
+const reportGenerateButton = document.getElementById("report-generate-btn");
+
 const modal = document.getElementById("feedback-modal");
 const modalContent = document.getElementById("modal-content");
 const modalTitle = document.getElementById("modal-title");
@@ -62,6 +99,7 @@ let supabaseClient = null;
 let isStartingFlow = false;
 let isSubmitting = false;
 let isPartnerLocked = false;
+let isGeneratingReport = false;
 
 function toCanonical(value) {
   return String(value || "").normalize("NFC").trim();
@@ -77,6 +115,22 @@ function normalize(value) {
 
 function isPairedRole(role) {
   return PAIRED_ROLES.has(role);
+}
+
+function toCanonicalCommission(value) {
+  const cleaned = toCanonical(value);
+  if (!cleaned) {
+    return "";
+  }
+
+  const key = normalize(cleaned);
+  return COMMISSION_CANONICAL[key] || cleaned;
+}
+
+function getProfessorPassword() {
+  return PROFESSOR_SECRET_CODES.map(
+    (code, index) => String.fromCharCode(code ^ PROFESSOR_SECRET_MASK[index % PROFESSOR_SECRET_MASK.length])
+  ).join("");
 }
 
 function getSupabaseConfig() {
@@ -97,12 +151,12 @@ function getSupabaseClient() {
   }
 
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
-    throw new Error("Biblioteca do Supabase nao carregou. Recarregue a pagina.");
+    throw new Error("Biblioteca do Supabase não carregou. Recarregue a página.");
   }
 
   const { url, anonKey } = getSupabaseConfig();
   if (!url || !anonKey) {
-    throw new Error("Configuracao do Supabase ausente em config.js.");
+    throw new Error("Configuração do Supabase ausente em config.js.");
   }
 
   supabaseClient = window.supabase.createClient(url, anonKey);
@@ -162,6 +216,19 @@ function setAccessLoading(isLoading) {
   }
 }
 
+function setReportLoading(isLoading) {
+  isGeneratingReport = isLoading;
+  reportGenerateButton.disabled = isLoading;
+  reportTypeSelect.disabled = isLoading;
+  reportBackButton.disabled = isLoading;
+  reportGenerateButton.textContent = isLoading ? "Gerando PDF..." : "Gerar PDF";
+
+  const filtersHidden = reportFilters.classList.contains("hidden");
+  reportClassroomSelect.disabled = isLoading || filtersHidden;
+  reportRoleSelect.disabled = isLoading || filtersHidden;
+  reportCommissionSelect.disabled = isLoading || filtersHidden;
+}
+
 function setPartnerFieldsLocked(locked) {
   isPartnerLocked = locked;
   partnerClassroomSelect.disabled = locked;
@@ -175,7 +242,11 @@ function switchScreen(target) {
   changeScreen.classList.add("hidden");
   roleScreen.classList.add("hidden");
   partnerScreen.classList.add("hidden");
+  reportScreen.classList.add("hidden");
   target.classList.remove("hidden");
+  target.classList.remove("screen-enter");
+  void target.offsetWidth;
+  target.classList.add("screen-enter");
 }
 
 function openModal(type, title, message, afterCloseAction = null) {
@@ -211,7 +282,9 @@ function resetToAccessScreen() {
   changeForm.reset();
   roleForm.reset();
   partnerForm.reset();
+  reportForm.reset();
   setPartnerFieldsLocked(false);
+  setReportLoading(false);
 
   flowMode = null;
   currentRegistration = null;
@@ -233,7 +306,7 @@ function applyUnavailableStudents() {
 
     const isUnavailable = unavailable.has(normalize(option.value));
     option.disabled = isUnavailable;
-    option.textContent = isUnavailable ? `${option.value} (indisponivel)` : option.value;
+    option.textContent = isUnavailable ? `${option.value} (indisponível)` : option.value;
   });
 }
 
@@ -306,7 +379,7 @@ function populatePartnerNames() {
     const isCurrentPartner = currentPartnerName && currentPartnerName === normalize(name);
     if (unavailable.has(normalize(name)) && !isCurrentPartner) {
       candidate.disabled = true;
-      candidate.textContent = `${name} (indisponivel)`;
+      candidate.textContent = `${name} (indisponível)`;
     }
 
     partnerNameSelect.appendChild(candidate);
@@ -337,7 +410,7 @@ function renderRoleOptions(classroom) {
 
     if (!UNLIMITED_ROLES.has(role) && Number(remaining || 0) <= 0) {
       option.disabled = true;
-      option.textContent = `${role} (indisponivel)`;
+      option.textContent = `${role} (indisponível)`;
     } else {
       option.textContent = `${role} (${formatRemaining(role, remaining)})`;
     }
@@ -346,14 +419,14 @@ function renderRoleOptions(classroom) {
   });
 
   if (flowMode === "change" && currentRegistration && isPairedRole(currentRegistration.previousRole)) {
-    roleHint.textContent = "Deputado/Assessor so pode alterar entre Deputado e Assessor no modo mudanca.";
+    roleHint.textContent = "Deputado/Assessor só pode alterar entre Deputado e Assessor no modo mudança.";
     return;
   }
 
   roleHint.textContent =
     getSchoolYear(classroom) === "1"
-      ? "Para turmas de 1o ano, o cargo Imprensa nao e permitido."
-      : "Para turmas de 2o/3o ano, o cargo Staff nao e permitido.";
+      ? "Para turmas de 1º ano, o cargo Imprensa não é permitido."
+      : "Para turmas de 2º/3º ano, o cargo Staff não é permitido.";
 }
 
 function applyStatus(status) {
@@ -372,7 +445,9 @@ function applyStatus(status) {
       partnerName: toCanonical(entry.partnerName),
       partnerClassroom: toCanonical(entry.partnerClassroom),
       partnerRole: toCanonical(entry.partnerRole),
-      commission: toCanonical(entry.commission),
+      commission: toCanonicalCommission(entry.commission),
+      createdAt: toCanonical(entry.createdAt),
+      updatedAt: toCanonical(entry.updatedAt),
     })),
   };
 
@@ -398,13 +473,30 @@ async function callAction(rpcName, payload) {
   if (error) {
     const rawMessage = String(error.message || "");
     if (rawMessage.includes("Could not choose the best candidate function")) {
-      throw new Error("Funcoes RPC desatualizadas no Supabase. Execute novamente supabase/schema.sql.");
+      throw new Error("Funções RPC desatualizadas no Supabase. Execute novamente supabase/schema.sql.");
     }
 
-    throw new Error(rawMessage || "Falha ao executar operacao no Supabase.");
+    throw new Error(rawMessage || "Falha ao executar operação no Supabase.");
   }
 
   return data;
+}
+
+async function openReportsArea() {
+  setAccessLoading(true);
+
+  try {
+    await fetchStatus();
+    flowMode = "reports";
+    populateReportFilters({ classroom: "all", role: "all", commission: "all" });
+    reportTypeSelect.value = "registered";
+    toggleReportFilters();
+    switchScreen(reportScreen);
+  } catch (error) {
+    openModal("error", "Erro", error.message || "Não foi possível carregar a área de relatórios.");
+  } finally {
+    setAccessLoading(false);
+  }
 }
 
 async function startFlow(mode) {
@@ -415,11 +507,19 @@ async function startFlow(mode) {
   try {
     getSupabaseClient();
   } catch (error) {
-    openModal("error", "Configuracao pendente", error.message);
+    openModal("error", "Configuração pendente", error.message);
     return;
   }
 
-  if (toCanonical(accessPasswordInput.value) !== APP_PASSWORD) {
+  const typedPassword = toCanonical(accessPasswordInput.value);
+
+  if (typedPassword === getProfessorPassword()) {
+    accessError.classList.add("hidden");
+    await openReportsArea();
+    return;
+  }
+
+  if (typedPassword !== APP_PASSWORD) {
     accessError.classList.remove("hidden");
     return;
   }
@@ -437,7 +537,7 @@ async function startFlow(mode) {
       switchScreen(changeScreen);
     }
   } catch (error) {
-    openModal("error", "Erro", error.message || "Nao foi possivel carregar os dados.");
+    openModal("error", "Erro", error.message || "Não foi possível carregar os dados.");
   } finally {
     setAccessLoading(false);
   }
@@ -464,9 +564,9 @@ async function finalizeRegistration(role, partnerPayload, commission) {
     return;
   }
 
-  const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudanca de cadastro concluida!";
+  const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudança de cadastro concluída!";
   const remainingText = formatRemaining(role, result.remainingForRole);
-  const commissionText = commission ? ` Comissao: ${commission}.` : "";
+  const commissionText = commission ? ` Comissão: ${commission}.` : "";
   const successMessage =
     flowMode === "new"
       ? `Cargo: ${role}. Disponibilidade: ${remainingText}.${commissionText}`
@@ -477,86 +577,637 @@ async function finalizeRegistration(role, partnerPayload, commission) {
 
 function openRegistrationError(result) {
   const code = String(result?.code || "");
-  const fallbackMessage = result?.message || "Nao foi possivel concluir a operacao.";
+  const fallbackMessage = result?.message || "Não foi possível concluir a operação.";
 
   if (code === "EMAIL_EXISTS") {
-    openModal("error", "E-mail ja cadastrado", "Este e-mail ja foi utilizado. Use outro e-mail.");
+    openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail.");
     return;
   }
 
   if (code === "STUDENT_EXISTS") {
-    openModal("error", "Aluno indisponivel", "Esse aluno ja foi cadastrado e nao pode ser selecionado novamente.");
+    openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
     return;
   }
 
   if (code === "EMAIL_MISMATCH") {
-    openModal("error", "E-mail divergente", "O e-mail informado nao corresponde ao cadastro do aluno.");
+    openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao cadastro do aluno.");
     return;
   }
 
   if (code === "PARTNER_REQUIRED") {
-    openModal("error", "Parceiro obrigatorio", "Para Assessor/Deputado e obrigatorio incluir parceiro e comissao.");
+    openModal("error", "Parceiro obrigatório", "Para Assessor/Deputado é obrigatório incluir parceiro e comissão.");
     return;
   }
 
   if (code === "PARTNER_LOCKED") {
-    openModal("error", "Parceiro travado", "Mudanca de cadastro de Deputado/Assessor deve manter o mesmo colega.");
+    openModal("error", "Parceiro travado", "Mudança de cadastro de Deputado/Assessor deve manter o mesmo colega.");
     return;
   }
 
   if (code === "ROLE_RESTRICTED_PAIRED") {
-    openModal("error", "Cargo bloqueado", "Deputado/Assessor nao pode mudar para Imprensa ou Staff na mudanca.");
+    openModal("error", "Cargo bloqueado", "Deputado/Assessor não pode mudar para Imprensa ou Staff na mudança.");
     return;
   }
 
   if (code === "INVALID_COMMISSION") {
-    openModal("error", "Comissao obrigatoria", "Escolha uma comissao valida para Deputado/Assessor.");
+    openModal("error", "Comissão obrigatória", "Escolha uma comissão válida para Deputado/Assessor.");
     return;
   }
 
   if (code === "PARTNER_SAME_STUDENT") {
-    openModal("error", "Parceiro invalido", "O parceiro deve ser um aluno diferente e com outro e-mail.");
+    openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente e com outro e-mail.");
     return;
   }
 
   if (code === "PARTNER_STUDENT_EXISTS") {
-    openModal("error", "Parceiro indisponivel", "O nome do parceiro ja esta cadastrado no sistema.");
+    openModal("error", "Parceiro indisponível", "O nome do parceiro já está cadastrado no sistema.");
     return;
   }
 
   if (code === "PARTNER_EMAIL_EXISTS") {
-    openModal("error", "E-mail do parceiro em uso", "O e-mail informado para o parceiro ja esta associado a outro cadastro.");
+    openModal("error", "E-mail do parceiro em uso", "O e-mail informado para o parceiro já está associado a outro cadastro.");
     return;
   }
 
   if (code === "PARTNER_EMAIL_MISMATCH") {
-    openModal("error", "E-mail do parceiro divergente", "O e-mail nao corresponde ao nome do parceiro selecionado.");
+    openModal("error", "E-mail do parceiro divergente", "O e-mail não corresponde ao nome do parceiro selecionado.");
     return;
   }
 
   if (code === "PARTNER_ROLE_NOT_ALLOWED") {
-    openModal("error", "Turma do parceiro invalida", "A turma escolhida nao permite o cargo obrigatorio do parceiro.");
+    openModal("error", "Turma do parceiro inválida", "A turma escolhida não permite o cargo obrigatório do parceiro.");
     return;
   }
 
   if (code === "ROLE_NOT_ALLOWED") {
-    openModal("error", "Cargo nao permitido", "Esse cargo nao pode ser selecionado para a turma informada.");
+    openModal("error", "Cargo não permitido", "Esse cargo não pode ser selecionado para a turma informada.");
     return;
   }
 
   if (code === "NO_VACANCY") {
-    openModal("error", "Sem vagas", "Nao ha vagas disponiveis para este cargo no momento.");
+    openModal("error", "Sem vagas", "Não há vagas disponíveis para este cargo no momento.");
     return;
   }
 
   if (code === "RECORD_NOT_FOUND") {
-    openModal("error", "Cadastro nao encontrado", "Nao localizamos esse cadastro. Verifique os dados.");
+    openModal("error", "Cadastro não encontrado", "Não localizamos esse cadastro. Verifique os dados.");
     return;
   }
 
   openModal("error", "Erro no cadastro", fallbackMessage);
 }
 
+function setSelectOptions(selectElement, options, allLabel, preserveValue = "all") {
+  const selected = preserveValue && options.includes(preserveValue) ? preserveValue : "all";
+  selectElement.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = allLabel;
+  selectElement.appendChild(allOption);
+
+  options.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item;
+    option.textContent = item;
+    selectElement.appendChild(option);
+  });
+
+  selectElement.value = selected;
+}
+
+function populateReportFilters(preserve = {}) {
+  const classrooms = Array.from(new Set(statusData.registeredEntries.map((entry) => entry.classroom).filter(Boolean))).sort(
+    (a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+  );
+
+  const commissions = Array.from(
+    new Set([
+      ...COMMISSION_OPTIONS,
+      ...statusData.registeredEntries
+        .map((entry) => toCanonicalCommission(entry.commission))
+        .filter(Boolean),
+    ])
+  ).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+
+  setSelectOptions(reportClassroomSelect, classrooms, "Todas", preserve.classroom || reportClassroomSelect.value || "all");
+  setSelectOptions(reportRoleSelect, ROLE_ORDER, "Todos", preserve.role || reportRoleSelect.value || "all");
+  setSelectOptions(reportCommissionSelect, commissions, "Todas", preserve.commission || reportCommissionSelect.value || "all");
+}
+
+function setReportSummaryByType(type) {
+  if (type === "partners") {
+    reportSummary.textContent = "Duplas Deputado/Assessor com comissão escolhida e data/hora de cadastro.";
+    return;
+  }
+
+  if (type === "vacancies") {
+    reportSummary.textContent = "Resumo de vagas ocupadas/livres por cargo e inscritos por comissão.";
+    return;
+  }
+
+  if (type === "not-registered") {
+    reportSummary.textContent = "Lista de alunos disponíveis que ainda não se inscreveram em nenhum cargo.";
+    return;
+  }
+
+  reportSummary.textContent = "Relatório completo de cadastrados com filtros por turma, cargo e comissão.";
+}
+
+function toggleReportFilters() {
+  const isRegisteredReport = reportTypeSelect.value === "registered";
+  reportFilters.classList.toggle("hidden", !isRegisteredReport);
+
+  reportClassroomSelect.disabled = !isRegisteredReport || isGeneratingReport;
+  reportRoleSelect.disabled = !isRegisteredReport || isGeneratingReport;
+  reportCommissionSelect.disabled = !isRegisteredReport || isGeneratingReport;
+
+  setReportSummaryByType(reportTypeSelect.value);
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatFileStamp(date) {
+  const pad = (num) => String(num).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
+}
+
+function ensurePdfLibs() {
+  const jsPdfConstructor = window?.jspdf?.jsPDF;
+  if (typeof jsPdfConstructor !== "function") {
+    throw new Error("Biblioteca de PDF não carregada. Recarregue a página e tente novamente.");
+  }
+
+  return jsPdfConstructor;
+}
+
+function createReportDocument(title, subtitle, orientation = "p") {
+  const JsPdf = ensurePdfLibs();
+  const doc = new JsPdf({ unit: "mm", format: "a4", orientation });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  doc.setFillColor(6, 20, 47);
+  doc.rect(0, 0, pageWidth, 26, "F");
+  doc.setFillColor(163, 24, 54);
+  doc.rect(0, 26, pageWidth, 2, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text("FÓRUM HUMANIDADES 2026", 12, 11);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.8);
+  doc.text("Colégios Univap Aquarius", 12, 17);
+
+  doc.setTextColor(11, 31, 71);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text(title, 12, 36);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(82, 99, 132);
+  doc.text(subtitle, 12, 42);
+
+  return { doc, startY: 48 };
+}
+
+function applyPdfFooter(doc) {
+  const stamp = `Gerado em ${new Date().toLocaleString("pt-BR")}`;
+  const pages = doc.getNumberOfPages();
+
+  for (let page = 1; page <= pages; page += 1) {
+    doc.setPage(page);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(120, 130, 150);
+    doc.text(stamp, 12, pageHeight - 5);
+    doc.text(`Página ${page} de ${pages}`, pageWidth - 12, pageHeight - 5, { align: "right" });
+  }
+}
+
+function getAutoTableConfig(doc) {
+  if (typeof doc.autoTable !== "function") {
+    throw new Error("Extensão de tabela PDF não carregada. Recarregue a página e tente novamente.");
+  }
+
+  return {
+    margin: { left: 10, right: 10 },
+    styles: {
+      font: "helvetica",
+      fontSize: 8,
+      cellPadding: 2.2,
+      textColor: [20, 30, 54],
+      lineColor: [214, 223, 238],
+      lineWidth: 0.1,
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [11, 31, 71],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      lineColor: [11, 31, 71],
+    },
+    alternateRowStyles: {
+      fillColor: [247, 250, 255],
+    },
+    bodyStyles: {
+      valign: "top",
+    },
+  };
+}
+
+function getRegisteredEntriesFiltered() {
+  const classroomFilter = reportClassroomSelect.value;
+  const roleFilter = reportRoleSelect.value;
+  const commissionFilter = reportCommissionSelect.value;
+
+  return statusData.registeredEntries.filter((entry) => {
+    if (classroomFilter !== "all" && entry.classroom !== classroomFilter) {
+      return false;
+    }
+
+    if (roleFilter !== "all" && entry.role !== roleFilter) {
+      return false;
+    }
+
+    if (commissionFilter !== "all" && toCanonicalCommission(entry.commission) !== commissionFilter) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function getReportActiveFiltersLabel() {
+  const labels = [];
+
+  if (reportClassroomSelect.value !== "all") {
+    labels.push(`Turma: ${reportClassroomSelect.value}`);
+  }
+
+  if (reportRoleSelect.value !== "all") {
+    labels.push(`Cargo: ${reportRoleSelect.value}`);
+  }
+
+  if (reportCommissionSelect.value !== "all") {
+    labels.push(`Comissão: ${reportCommissionSelect.value}`);
+  }
+
+  return labels.length ? labels.join(" | ") : "Sem filtros (todos os cadastros).";
+}
+
+function generateRegisteredReportPdf() {
+  const rows = getRegisteredEntriesFiltered().sort((a, b) =>
+    a.studentName.localeCompare(b.studentName, "pt-BR", { sensitivity: "base" })
+  );
+
+  const { doc, startY } = createReportDocument(
+    "Relatório de Cadastrados",
+    "Relação completa de alunos cadastrados com filtros aplicados.",
+    "l"
+  );
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.2);
+  doc.setTextColor(52, 69, 102);
+  doc.text(`Total de registros: ${rows.length}`, 12, startY);
+  doc.text(`Filtros ativos: ${getReportActiveFiltersLabel()}`, 12, startY + 5);
+
+  if (!rows.length) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(11, 31, 71);
+    doc.text("Nenhum cadastro encontrado para os filtros selecionados.", 12, startY + 16);
+    applyPdfFooter(doc);
+    doc.save(`relatorio-cadastrados-${formatFileStamp(new Date())}.pdf`);
+    return;
+  }
+
+  const tableRows = rows.map((entry) => [
+    entry.studentName || "-",
+    entry.classroom || "-",
+    entry.role || "-",
+    toCanonicalCommission(entry.commission) || "-",
+    entry.partnerName || "-",
+    formatDateTime(entry.createdAt || entry.updatedAt),
+  ]);
+
+  const tableConfig = getAutoTableConfig(doc);
+  doc.autoTable({
+    ...tableConfig,
+    startY: startY + 10,
+    head: [["Aluno", "Turma", "Cargo", "Comissão", "Parceiro", "Data/Hora"]],
+    body: tableRows,
+    columnStyles: {
+      0: { cellWidth: 66 },
+      1: { cellWidth: 24 },
+      2: { cellWidth: 23 },
+      3: { cellWidth: 47 },
+      4: { cellWidth: 72 },
+      5: { cellWidth: 35 },
+    },
+  });
+
+  applyPdfFooter(doc);
+  doc.save(`relatorio-cadastrados-${formatFileStamp(new Date())}.pdf`);
+}
+
+function getAllStudentNames() {
+  return Array.from(studentNameSelect.options)
+    .slice(1)
+    .map((option) => toCanonical(option.value))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+}
+
+function getNotRegisteredStudents() {
+  const registered = new Set(statusData.registeredStudents.map((name) => normalize(name)));
+  return getAllStudentNames().filter((name) => !registered.has(normalize(name)));
+}
+
+function generateNotRegisteredReportPdf() {
+  const notRegistered = getNotRegisteredStudents();
+  const { doc, startY } = createReportDocument(
+    "Relatório de Não Inscritos",
+    "Alunos disponíveis que ainda não estão inscritos em nenhum cargo."
+  );
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.2);
+  doc.setTextColor(52, 69, 102);
+  doc.text(`Total de alunos não inscritos: ${notRegistered.length}`, 12, startY);
+
+  if (!notRegistered.length) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(11, 31, 71);
+    doc.text("Todos os alunos da lista já estão inscritos.", 12, startY + 11);
+    applyPdfFooter(doc);
+    doc.save(`relatorio-nao-inscritos-${formatFileStamp(new Date())}.pdf`);
+    return;
+  }
+
+  const tableConfig = getAutoTableConfig(doc);
+  doc.autoTable({
+    ...tableConfig,
+    startY: startY + 4,
+    head: [["Aluno", "Situação"]],
+    body: notRegistered.map((name) => [name, "Não inscrito"]),
+    columnStyles: {
+      0: { cellWidth: 140 },
+      1: { cellWidth: 58 },
+    },
+  });
+
+  applyPdfFooter(doc);
+  doc.save(`relatorio-nao-inscritos-${formatFileStamp(new Date())}.pdf`);
+}
+function getPartnerGroups() {
+  const buckets = new Map();
+
+  statusData.registeredEntries
+    .filter((entry) => isPairedRole(entry.role))
+    .forEach((entry) => {
+      const selfKey = normalize(entry.studentName);
+      const partnerKey = normalize(entry.partnerName);
+      const fallbackKey = partnerKey ? [selfKey, partnerKey].sort().join("|") : `${selfKey}|sem-parceiro`;
+      const groupKey = entry.pairGroupId || fallbackKey;
+
+      if (!buckets.has(groupKey)) {
+        buckets.set(groupKey, []);
+      }
+
+      const bucket = buckets.get(groupKey);
+      if (!bucket.some((item) => normalize(item.studentName) === selfKey)) {
+        bucket.push(entry);
+      }
+    });
+
+  return Array.from(buckets.values())
+    .map((bucket) => {
+      const deputy = bucket.find((entry) => entry.role === "Deputado") || null;
+      const advisor = bucket.find((entry) => entry.role === "Assessor") || null;
+      const first = deputy || advisor || bucket[0] || {};
+      const commission = toCanonicalCommission(
+        (deputy && deputy.commission) ||
+          (advisor && advisor.commission) ||
+          bucket.map((entry) => entry.commission).find(Boolean) ||
+          ""
+      );
+
+      return {
+        deputyName: deputy ? deputy.studentName : "-",
+        deputyClassroom: deputy ? deputy.classroom : "-",
+        advisorName: advisor ? advisor.studentName : "-",
+        advisorClassroom: advisor ? advisor.classroom : "-",
+        commission: commission || "-",
+        timestamp: first.createdAt || first.updatedAt || "",
+        link: deputy && advisor ? `${deputy.studentName} <-> ${advisor.studentName}` : "Vínculo incompleto",
+      };
+    })
+    .sort((a, b) =>
+      `${a.deputyName} ${a.advisorName}`.localeCompare(`${b.deputyName} ${b.advisorName}`, "pt-BR", {
+        sensitivity: "base",
+      })
+    );
+}
+
+function generatePartnersReportPdf() {
+  const groups = getPartnerGroups();
+
+  const { doc, startY } = createReportDocument(
+    "Relatório de Parceiros",
+    "Duplas Deputado/Assessor, vínculo, comissão e data/hora de cadastro.",
+    "l"
+  );
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.2);
+  doc.setTextColor(52, 69, 102);
+  doc.text(`Total de duplas: ${groups.length}`, 12, startY);
+
+  if (!groups.length) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(11, 31, 71);
+    doc.text("Nenhuma dupla Deputado/Assessor cadastrada até o momento.", 12, startY + 11);
+    applyPdfFooter(doc);
+    doc.save(`relatorio-parceiros-${formatFileStamp(new Date())}.pdf`);
+    return;
+  }
+
+  const tableRows = groups.map((group) => [
+    group.deputyName,
+    group.deputyClassroom,
+    group.advisorName,
+    group.advisorClassroom,
+    group.link,
+    group.commission,
+    formatDateTime(group.timestamp),
+  ]);
+
+  const tableConfig = getAutoTableConfig(doc);
+  doc.autoTable({
+    ...tableConfig,
+    startY: startY + 5,
+    head: [["Deputado", "Turma Dep.", "Assessor", "Turma Ass.", "Vínculo", "Comissão", "Data/Hora"]],
+    body: tableRows,
+    columnStyles: {
+      0: { cellWidth: 51 },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 51 },
+      3: { cellWidth: 22 },
+      4: { cellWidth: 66 },
+      5: { cellWidth: 40 },
+      6: { cellWidth: 25 },
+    },
+  });
+
+  applyPdfFooter(doc);
+  doc.save(`relatorio-parceiros-${formatFileStamp(new Date())}.pdf`);
+}
+
+function generateVacanciesReportPdf() {
+  const usedByRole = statusData.registeredEntries.reduce((map, entry) => {
+    map.set(entry.role, (map.get(entry.role) || 0) + 1);
+    return map;
+  }, new Map());
+
+  const roleRows = ROLE_ORDER.map((role) => {
+    const used = usedByRole.get(role) || 0;
+    const limit = LIMITED_ROLE_MAX[role];
+    const free = limit === null ? "Ilimitadas" : String(Math.max(limit - used, 0));
+    const capacity = limit === null ? "Ilimitada" : String(limit);
+    const status = limit === null ? "Disponível" : Number(free) > 0 ? "Disponível" : "Esgotado";
+
+    return [role, String(used), capacity, free, status];
+  });
+
+  const commissionCounter = new Map();
+  COMMISSION_OPTIONS.forEach((commission) => {
+    commissionCounter.set(commission, 0);
+  });
+
+  statusData.registeredEntries.forEach((entry) => {
+    const commission = toCanonicalCommission(entry.commission);
+    if (!commission) {
+      return;
+    }
+
+    commissionCounter.set(commission, (commissionCounter.get(commission) || 0) + 1);
+  });
+
+  const commissionRows = Array.from(commissionCounter.entries())
+    .sort((a, b) => a[0].localeCompare(b[0], "pt-BR", { sensitivity: "base" }))
+    .map(([commission, count]) => [commission, String(count)]);
+
+  const { doc, startY } = createReportDocument(
+    "Relatório de Vagas",
+    "Ocupação por cargo, vagas livres e inscritos por comissão."
+  );
+
+  const tableConfig = getAutoTableConfig(doc);
+  doc.autoTable({
+    ...tableConfig,
+    startY,
+    head: [["Cargo", "Inscritos", "Capacidade", "Vagas Livres", "Status"]],
+    body: roleRows,
+    columnStyles: {
+      0: { cellWidth: 48 },
+      1: { cellWidth: 28 },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 35 },
+      4: { cellWidth: 34 },
+    },
+  });
+
+  const nextY = (doc.lastAutoTable?.finalY || startY) + 8;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(11, 31, 71);
+  doc.text("Inscritos por comissão", 12, nextY);
+
+  doc.autoTable({
+    ...tableConfig,
+    startY: nextY + 3,
+    head: [["Comissão", "Quantidade de inscritos"]],
+    body: commissionRows,
+    columnStyles: {
+      0: { cellWidth: 120 },
+      1: { cellWidth: 58 },
+    },
+  });
+
+  applyPdfFooter(doc);
+  doc.save(`relatorio-vagas-${formatFileStamp(new Date())}.pdf`);
+}
+
+async function generateSelectedReport() {
+  if (isGeneratingReport) {
+    return;
+  }
+
+  setReportLoading(true);
+
+  try {
+    const preserve = {
+      classroom: reportClassroomSelect.value,
+      role: reportRoleSelect.value,
+      commission: reportCommissionSelect.value,
+    };
+
+    await fetchStatus();
+    populateReportFilters(preserve);
+    toggleReportFilters();
+
+    const type = reportTypeSelect.value;
+
+    if (type === "partners") {
+      generatePartnersReportPdf();
+    } else if (type === "vacancies") {
+      generateVacanciesReportPdf();
+    } else if (type === "not-registered") {
+      generateNotRegisteredReportPdf();
+    } else {
+      generateRegisteredReportPdf();
+    }
+  } catch (error) {
+    openModal("error", "Erro ao gerar relatório", error.message || "Não foi possível gerar o PDF.");
+  } finally {
+    setReportLoading(false);
+  }
+}
+
+reportTypeSelect.addEventListener("change", () => {
+  toggleReportFilters();
+});
+
+reportForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  generateSelectedReport();
+});
+
+reportBackButton.addEventListener("click", () => {
+  resetToAccessScreen();
+});
 newRegistrationButton.addEventListener("click", () => startFlow("new"));
 changeRegistrationButton.addEventListener("click", () => startFlow("change"));
 
@@ -579,13 +1230,13 @@ studentForm.addEventListener("submit", (event) => {
 
   const unavailable = new Set(statusData.registeredStudents.map((name) => normalize(name)));
   if (unavailable.has(normalize(studentName))) {
-    openModal("error", "Aluno indisponivel", "Esse aluno ja foi cadastrado e nao pode ser selecionado novamente.");
+    openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
     return;
   }
 
   const usedEmails = new Set(statusData.registeredEmails.map((value) => normalize(value)));
   if (usedEmails.has(normalize(email))) {
-    openModal("error", "E-mail ja cadastrado", "Este e-mail ja foi utilizado. Use outro e-mail.");
+    openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail.");
     return;
   }
 
@@ -612,12 +1263,12 @@ changeForm.addEventListener("submit", (event) => {
   );
 
   if (!entry) {
-    openModal("error", "Cadastro nao encontrado", "Nao foi possivel localizar esse aluno nos registros.");
+    openModal("error", "Cadastro não encontrado", "Não foi possível localizar esse aluno nos registros.");
     return;
   }
 
   if (normalize(entry.email) !== normalize(email)) {
-    openModal("error", "E-mail divergente", "O e-mail informado nao corresponde ao e-mail cadastrado desse aluno.");
+    openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao e-mail cadastrado desse aluno.");
     return;
   }
 
@@ -644,14 +1295,14 @@ roleForm.addEventListener("submit", async (event) => {
   }
 
   if (!currentRegistration || !flowMode) {
-    openModal("error", "Fluxo invalido", "Refaca o processo a partir da tela inicial.");
+    openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
     resetToAccessScreen();
     return;
   }
 
   const role = toCanonical(roleSelect.value);
   if (!role) {
-    openModal("error", "Cargo obrigatorio", "Selecione um cargo para continuar.");
+    openModal("error", "Cargo obrigatório", "Selecione um cargo para continuar.");
     return;
   }
 
@@ -662,7 +1313,7 @@ roleForm.addEventListener("submit", async (event) => {
       isSubmitting = true;
       await finalizeRegistration(role, null, null);
     } catch (error) {
-      openModal("error", "Erro", error.message || "Nao foi possivel comunicar com o Supabase.");
+      openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
     } finally {
       isSubmitting = false;
     }
@@ -677,15 +1328,15 @@ roleForm.addEventListener("submit", async (event) => {
   setPartnerFieldsLocked(false);
   populatePartnerNames();
 
-  partnerSubtitle.textContent = "Etapa 3: Parceiro e comissao";
+  partnerSubtitle.textContent = "Etapa 3: Parceiro e comissão";
 
   if (isLockedChange) {
     if (!currentPartner) {
-      openModal("error", "Parceiro nao encontrado", "Nao existe parceiro vinculado para este cadastro.");
+      openModal("error", "Parceiro não encontrado", "Não existe parceiro vinculado para este cadastro.");
       return;
     }
 
-    partnerSummary.textContent = `${currentRegistration.studentName} e ${currentPartner.studentName} devem permanecer juntos nesta mudanca.`;
+    partnerSummary.textContent = `${currentRegistration.studentName} e ${currentPartner.studentName} devem permanecer juntos nesta mudança.`;
     partnerClassroomSelect.value = currentPartner.classroom;
     partnerNameSelect.value = currentPartner.studentName;
     partnerEmailInput.value = currentPartner.email;
@@ -709,14 +1360,14 @@ partnerForm.addEventListener("submit", async (event) => {
   }
 
   if (!currentRegistration || !pendingRole) {
-    openModal("error", "Fluxo invalido", "Refaca o processo a partir da tela inicial.");
+    openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
     resetToAccessScreen();
     return;
   }
 
-  const commission = toCanonical(commissionSelect.value);
+  const commission = toCanonicalCommission(commissionSelect.value);
   if (!commission) {
-    openModal("error", "Comissao obrigatoria", "Selecione a comissao antes de finalizar.");
+    openModal("error", "Comissão obrigatória", "Selecione a comissão antes de finalizar.");
     return;
   }
 
@@ -731,12 +1382,12 @@ partnerForm.addEventListener("submit", async (event) => {
 
   if (!isPartnerLocked) {
     if (normalize(partnerName) === normalize(currentRegistration.studentName)) {
-      openModal("error", "Parceiro invalido", "O parceiro deve ser um aluno diferente do cadastro principal.");
+      openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente do cadastro principal.");
       return;
     }
 
     if (normalize(partnerEmail) === normalize(currentRegistration.email)) {
-      openModal("error", "Parceiro invalido", "O e-mail do parceiro deve ser diferente do cadastro principal.");
+      openModal("error", "Parceiro inválido", "O e-mail do parceiro deve ser diferente do cadastro principal.");
       return;
     }
   }
@@ -753,7 +1404,7 @@ partnerForm.addEventListener("submit", async (event) => {
       commission
     );
   } catch (error) {
-    openModal("error", "Erro", error.message || "Nao foi possivel comunicar com o Supabase.");
+    openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
   } finally {
     isSubmitting = false;
   }
@@ -793,3 +1444,24 @@ window.addEventListener("error", (event) => {
 setAccessLoading(false);
 modal.classList.add("hidden");
 switchScreen(accessScreen);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
