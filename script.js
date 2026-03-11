@@ -795,6 +795,9 @@ function applyPdfFooter(doc) {
 
   for (let page = 1; page <= pages; page += 1) {
     doc.setPage(page);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(120, 130, 150);
@@ -1444,6 +1447,7 @@ window.addEventListener("error", (event) => {
 setAccessLoading(false);
 modal.classList.add("hidden");
 switchScreen(accessScreen);
+
 
 
 
