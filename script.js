@@ -1,6 +1,9 @@
 const APP_PASSWORD = "univ@p.humanidades";
 const PROFESSOR_SECRET_CODES = Object.freeze([97, 47, 104, 74, 52, 112, 110, 126, 47, 41, 68, 36, 110, 93, 127, 52, 99, 77, 53, 102, 110]);
 const PROFESSOR_SECRET_MASK = Object.freeze([17, 93, 7, 44, 81, 3, 29]);
+const REGISTRATION_OPEN_AT_UTC_MS = Date.parse("2026-03-19T13:00:00Z");
+const REGISTRATION_LOCK_MESSAGE =
+  "Aguarde mais um pouco: as inscri\u00e7\u00f5es abrem em 19/03/2026 \u00e0s 10h00 (Bras\u00edlia).";
 
 const ROLE_ORDER = ["Assessor", "Deputado", "Imprensa", "Staff"];
 const UNLIMITED_ROLES = new Set(["Assessor", "Deputado"]);
@@ -12,20 +15,20 @@ const LIMITED_ROLE_MAX = Object.freeze({
   Deputado: null,
 });
 const COMMISSION_OPTIONS = Object.freeze([
-  "Saúde",
-  "Educação",
+  "SaÃºde",
+  "EducaÃ§Ã£o",
   "Direitos Humanos",
-  "Indústria, ciência e tecnologia",
+  "IndÃºstria, ciÃªncia e tecnologia",
   "Meio ambiente e sustentabilidade",
-  "Segurança Pública",
+  "SeguranÃ§a PÃºblica",
 ]);
 const COMMISSION_CANONICAL = Object.freeze({
-  "saude": "Saúde",
-  "educacao": "Educação",
+  "saude": "SaÃºde",
+  "educacao": "EducaÃ§Ã£o",
   "direitos humanos": "Direitos Humanos",
-  "industria, ciencia e tecnologia": "Indústria, ciência e tecnologia",
+  "industria, ciencia e tecnologia": "IndÃºstria, ciÃªncia e tecnologia",
   "meio ambiente e sustentabilidade": "Meio ambiente e sustentabilidade",
-  "seguranca publica": "Segurança Pública",
+  "seguranca publica": "SeguranÃ§a PÃºblica",
 });
 
 
@@ -41,6 +44,13 @@ const accessError = document.getElementById("access-error");
 const accessLoading = document.getElementById("access-loading");
 const newRegistrationButton = document.getElementById("new-registration-btn");
 const changeRegistrationButton = document.getElementById("change-registration-btn");
+const registrationCountdown = document.getElementById("registration-countdown");
+const registrationCountdownValue = document.getElementById("registration-countdown-value");
+const registrationCountdownTarget = document.getElementById("registration-countdown-target");
+const countdownDays = document.getElementById("countdown-days");
+const countdownHours = document.getElementById("countdown-hours");
+const countdownMinutes = document.getElementById("countdown-minutes");
+const countdownSeconds = document.getElementById("countdown-seconds");
 
 const studentForm = document.getElementById("student-form");
 const classroomSelect = document.getElementById("classroom");
@@ -100,6 +110,7 @@ let isStartingFlow = false;
 let isSubmitting = false;
 let isPartnerLocked = false;
 let isGeneratingReport = false;
+let registrationCountdownIntervalId = null;
 
 function toCanonical(value) {
   return String(value || "").normalize("NFC").trim();
@@ -151,12 +162,12 @@ function getSupabaseClient() {
   }
 
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
-    throw new Error("Biblioteca do Supabase não carregou. Recarregue a página.");
+    throw new Error("Biblioteca do Supabase nÃ£o carregou. Recarregue a pÃ¡gina.");
   }
 
   const { url, anonKey } = getSupabaseConfig();
   if (!url || !anonKey) {
-    throw new Error("Configuração do Supabase ausente em config.js.");
+    throw new Error("ConfiguraÃ§Ã£o do Supabase ausente em config.js.");
   }
 
   supabaseClient = window.supabase.createClient(url, anonKey);
@@ -216,6 +227,89 @@ function setAccessLoading(isLoading) {
   }
 }
 
+function isRegistrationLocked(nowMs = Date.now()) {
+  return nowMs < REGISTRATION_OPEN_AT_UTC_MS;
+}
+
+function getCountdownParts(remainingMs) {
+  const totalSeconds = Math.max(Math.floor(remainingMs / 1000), 0);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (value) => String(value).padStart(2, "0");
+
+  return {
+    days: pad(days),
+    hours: pad(hours),
+    minutes: pad(minutes),
+    seconds: pad(seconds),
+  };
+}
+
+function applyCountdownParts(parts) {
+  if (countdownDays) {
+    countdownDays.textContent = parts.days;
+  }
+
+  if (countdownHours) {
+    countdownHours.textContent = parts.hours;
+  }
+
+  if (countdownMinutes) {
+    countdownMinutes.textContent = parts.minutes;
+  }
+
+  if (countdownSeconds) {
+    countdownSeconds.textContent = parts.seconds;
+  }
+}
+
+function updateRegistrationCountdown() {
+  if (
+    !registrationCountdown ||
+    !registrationCountdownValue ||
+    !registrationCountdownTarget ||
+    !countdownDays ||
+    !countdownHours ||
+    !countdownMinutes ||
+    !countdownSeconds
+  ) {
+    return;
+  }
+
+  registrationCountdownTarget.textContent = "Hor\u00e1rio de Bras\u00edlia: 19/03/2026 \u00e0s 10h00";
+
+  if (!isRegistrationLocked()) {
+    registrationCountdown.classList.add("hidden");
+    applyCountdownParts({ days: "00", hours: "00", minutes: "00", seconds: "00" });
+
+    if (registrationCountdownIntervalId) {
+      clearInterval(registrationCountdownIntervalId);
+      registrationCountdownIntervalId = null;
+    }
+    return;
+  }
+
+  const remaining = REGISTRATION_OPEN_AT_UTC_MS - Date.now();
+  registrationCountdown.classList.remove("hidden");
+  applyCountdownParts(getCountdownParts(remaining));
+}
+
+function startRegistrationCountdown() {
+  if (registrationCountdownIntervalId) {
+    clearInterval(registrationCountdownIntervalId);
+    registrationCountdownIntervalId = null;
+  }
+
+  updateRegistrationCountdown();
+
+  if (!isRegistrationLocked()) {
+    return;
+  }
+
+  registrationCountdownIntervalId = setInterval(updateRegistrationCountdown, 1000);
+}
 function setReportLoading(isLoading) {
   isGeneratingReport = isLoading;
   reportGenerateButton.disabled = isLoading;
@@ -294,6 +388,7 @@ function resetToAccessScreen() {
   accessError.classList.add("hidden");
   setAccessLoading(false);
   switchScreen(accessScreen);
+  updateRegistrationCountdown();
 }
 
 function applyUnavailableStudents() {
@@ -306,7 +401,7 @@ function applyUnavailableStudents() {
 
     const isUnavailable = unavailable.has(normalize(option.value));
     option.disabled = isUnavailable;
-    option.textContent = isUnavailable ? `${option.value} (indisponível)` : option.value;
+    option.textContent = isUnavailable ? `${option.value} (indisponÃ­vel)` : option.value;
   });
 }
 
@@ -379,7 +474,7 @@ function populatePartnerNames() {
     const isCurrentPartner = currentPartnerName && currentPartnerName === normalize(name);
     if (unavailable.has(normalize(name)) && !isCurrentPartner) {
       candidate.disabled = true;
-      candidate.textContent = `${name} (indisponível)`;
+      candidate.textContent = `${name} (indisponÃ­vel)`;
     }
 
     partnerNameSelect.appendChild(candidate);
@@ -410,7 +505,7 @@ function renderRoleOptions(classroom) {
 
     if (!UNLIMITED_ROLES.has(role) && Number(remaining || 0) <= 0) {
       option.disabled = true;
-      option.textContent = `${role} (indisponível)`;
+      option.textContent = `${role} (indisponÃ­vel)`;
     } else {
       option.textContent = `${role} (${formatRemaining(role, remaining)})`;
     }
@@ -419,14 +514,14 @@ function renderRoleOptions(classroom) {
   });
 
   if (flowMode === "change" && currentRegistration && isPairedRole(currentRegistration.previousRole)) {
-    roleHint.textContent = "Deputado/Assessor só pode alterar entre Deputado e Assessor no modo mudança.";
+    roleHint.textContent = "Deputado/Assessor sÃ³ pode alterar entre Deputado e Assessor no modo mudanÃ§a.";
     return;
   }
 
   roleHint.textContent =
     getSchoolYear(classroom) === "1"
-      ? "Para turmas de 1º ano, o cargo Imprensa não é permitido."
-      : "Para turmas de 2º/3º ano, o cargo Staff não é permitido.";
+      ? "Para turmas de 1Âº ano, o cargo Imprensa nÃ£o Ã© permitido."
+      : "Para turmas de 2Âº/3Âº ano, o cargo Staff nÃ£o Ã© permitido.";
 }
 
 function applyStatus(status) {
@@ -473,10 +568,10 @@ async function callAction(rpcName, payload) {
   if (error) {
     const rawMessage = String(error.message || "");
     if (rawMessage.includes("Could not choose the best candidate function")) {
-      throw new Error("Funções RPC desatualizadas no Supabase. Execute novamente supabase/schema.sql.");
+      throw new Error("FunÃ§Ãµes RPC desatualizadas no Supabase. Execute novamente supabase/schema.sql.");
     }
 
-    throw new Error(rawMessage || "Falha ao executar operação no Supabase.");
+    throw new Error(rawMessage || "Falha ao executar operaÃ§Ã£o no Supabase.");
   }
 
   return data;
@@ -493,7 +588,7 @@ async function openReportsArea() {
     toggleReportFilters();
     switchScreen(reportScreen);
   } catch (error) {
-    openModal("error", "Erro", error.message || "Não foi possível carregar a área de relatórios.");
+    openModal("error", "Erro", error.message || "NÃ£o foi possÃ­vel carregar a Ã¡rea de relatÃ³rios.");
   } finally {
     setAccessLoading(false);
   }
@@ -504,18 +599,33 @@ async function startFlow(mode) {
     return;
   }
 
-  try {
-    getSupabaseClient();
-  } catch (error) {
-    openModal("error", "Configuração pendente", error.message);
-    return;
-  }
-
   const typedPassword = toCanonical(accessPasswordInput.value);
 
   if (typedPassword === getProfessorPassword()) {
     accessError.classList.add("hidden");
+
+    try {
+      getSupabaseClient();
+    } catch (error) {
+      openModal("error", "Configura\u00e7\u00e3o pendente", error.message);
+      return;
+    }
+
     await openReportsArea();
+    return;
+  }
+
+  if (isRegistrationLocked()) {
+    accessError.classList.add("hidden");
+    updateRegistrationCountdown();
+    openModal("error", "Inscri\u00e7\u00f5es temporariamente fechadas", REGISTRATION_LOCK_MESSAGE);
+    return;
+  }
+
+  try {
+    getSupabaseClient();
+  } catch (error) {
+    openModal("error", "Configura\u00e7\u00e3o pendente", error.message);
     return;
   }
 
@@ -537,7 +647,7 @@ async function startFlow(mode) {
       switchScreen(changeScreen);
     }
   } catch (error) {
-    openModal("error", "Erro", error.message || "Não foi possível carregar os dados.");
+    openModal("error", "Erro", error.message || "N\u00e3o foi poss\u00edvel carregar os dados.");
   } finally {
     setAccessLoading(false);
   }
@@ -564,9 +674,9 @@ async function finalizeRegistration(role, partnerPayload, commission) {
     return;
   }
 
-  const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "Mudança de cadastro concluída!";
+  const successTitle = flowMode === "new" ? "Cadastro realizado com sucesso!" : "MudanÃ§a de cadastro concluÃ­da!";
   const remainingText = formatRemaining(role, result.remainingForRole);
-  const commissionText = commission ? ` Comissão: ${commission}.` : "";
+  const commissionText = commission ? ` ComissÃ£o: ${commission}.` : "";
   const successMessage =
     flowMode === "new"
       ? `Cargo: ${role}. Disponibilidade: ${remainingText}.${commissionText}`
@@ -577,80 +687,80 @@ async function finalizeRegistration(role, partnerPayload, commission) {
 
 function openRegistrationError(result) {
   const code = String(result?.code || "");
-  const fallbackMessage = result?.message || "Não foi possível concluir a operação.";
+  const fallbackMessage = result?.message || "NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o.";
 
   if (code === "EMAIL_EXISTS") {
-    openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail.");
+    openModal("error", "E-mail jÃ¡ cadastrado", "Este e-mail jÃ¡ foi utilizado. Use outro e-mail.");
     return;
   }
 
   if (code === "STUDENT_EXISTS") {
-    openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
+    openModal("error", "Aluno indisponÃ­vel", "Esse aluno jÃ¡ foi cadastrado e nÃ£o pode ser selecionado novamente.");
     return;
   }
 
   if (code === "EMAIL_MISMATCH") {
-    openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao cadastro do aluno.");
+    openModal("error", "E-mail divergente", "O e-mail informado nÃ£o corresponde ao cadastro do aluno.");
     return;
   }
 
   if (code === "PARTNER_REQUIRED") {
-    openModal("error", "Parceiro obrigatório", "Para Assessor/Deputado é obrigatório incluir parceiro e comissão.");
+    openModal("error", "Parceiro obrigatÃ³rio", "Para Assessor/Deputado Ã© obrigatÃ³rio incluir parceiro e comissÃ£o.");
     return;
   }
 
   if (code === "PARTNER_LOCKED") {
-    openModal("error", "Parceiro travado", "Mudança de cadastro de Deputado/Assessor deve manter o mesmo colega.");
+    openModal("error", "Parceiro travado", "MudanÃ§a de cadastro de Deputado/Assessor deve manter o mesmo colega.");
     return;
   }
 
   if (code === "ROLE_RESTRICTED_PAIRED") {
-    openModal("error", "Cargo bloqueado", "Deputado/Assessor não pode mudar para Imprensa ou Staff na mudança.");
+    openModal("error", "Cargo bloqueado", "Deputado/Assessor nÃ£o pode mudar para Imprensa ou Staff na mudanÃ§a.");
     return;
   }
 
   if (code === "INVALID_COMMISSION") {
-    openModal("error", "Comissão obrigatória", "Escolha uma comissão válida para Deputado/Assessor.");
+    openModal("error", "ComissÃ£o obrigatÃ³ria", "Escolha uma comissÃ£o vÃ¡lida para Deputado/Assessor.");
     return;
   }
 
   if (code === "PARTNER_SAME_STUDENT") {
-    openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente e com outro e-mail.");
+    openModal("error", "Parceiro invÃ¡lido", "O parceiro deve ser um aluno diferente e com outro e-mail.");
     return;
   }
 
   if (code === "PARTNER_STUDENT_EXISTS") {
-    openModal("error", "Parceiro indisponível", "O nome do parceiro já está cadastrado no sistema.");
+    openModal("error", "Parceiro indisponÃ­vel", "O nome do parceiro jÃ¡ estÃ¡ cadastrado no sistema.");
     return;
   }
 
   if (code === "PARTNER_EMAIL_EXISTS") {
-    openModal("error", "E-mail do parceiro em uso", "O e-mail informado para o parceiro já está associado a outro cadastro.");
+    openModal("error", "E-mail do parceiro em uso", "O e-mail informado para o parceiro jÃ¡ estÃ¡ associado a outro cadastro.");
     return;
   }
 
   if (code === "PARTNER_EMAIL_MISMATCH") {
-    openModal("error", "E-mail do parceiro divergente", "O e-mail não corresponde ao nome do parceiro selecionado.");
+    openModal("error", "E-mail do parceiro divergente", "O e-mail nÃ£o corresponde ao nome do parceiro selecionado.");
     return;
   }
 
   if (code === "PARTNER_ROLE_NOT_ALLOWED") {
-    openModal("error", "Turma do parceiro inválida", "A turma escolhida não permite o cargo obrigatório do parceiro.");
+    openModal("error", "Turma do parceiro invÃ¡lida", "A turma escolhida nÃ£o permite o cargo obrigatÃ³rio do parceiro.");
     return;
   }
 
   if (code === "ROLE_NOT_ALLOWED") {
-    openModal("error", "Cargo não permitido", "Esse cargo não pode ser selecionado para a turma informada.");
+    openModal("error", "Cargo nÃ£o permitido", "Esse cargo nÃ£o pode ser selecionado para a turma informada.");
     return;
   }
 
   if (code === "NO_VACANCY") {
-    openModal("error", "Sem vagas", "Não há vagas disponíveis para este cargo no momento.");
+    openModal("error", "Sem vagas", "NÃ£o hÃ¡ vagas disponÃ­veis para este cargo no momento.");
     return;
   }
 
   if (code === "RECORD_NOT_FOUND") {
-    openModal("error", "Cadastro não encontrado", "Não localizamos esse cadastro. Verifique os dados.");
+    openModal("error", "Cadastro nÃ£o encontrado", "NÃ£o localizamos esse cadastro. Verifique os dados.");
     return;
   }
 
@@ -697,21 +807,21 @@ function populateReportFilters(preserve = {}) {
 
 function setReportSummaryByType(type) {
   if (type === "partners") {
-    reportSummary.textContent = "Duplas Deputado/Assessor com comissão escolhida e data/hora de cadastro.";
+    reportSummary.textContent = "Duplas Deputado/Assessor com comissÃ£o escolhida e data/hora de cadastro.";
     return;
   }
 
   if (type === "vacancies") {
-    reportSummary.textContent = "Resumo de vagas ocupadas/livres por cargo e inscritos por comissão.";
+    reportSummary.textContent = "Resumo de vagas ocupadas/livres por cargo e inscritos por comissÃ£o.";
     return;
   }
 
   if (type === "not-registered") {
-    reportSummary.textContent = "Lista de alunos disponíveis que ainda não se inscreveram em nenhum cargo.";
+    reportSummary.textContent = "Lista de alunos disponÃ­veis que ainda nÃ£o se inscreveram em nenhum cargo.";
     return;
   }
 
-  reportSummary.textContent = "Relatório completo de cadastrados com filtros por turma, cargo e comissão.";
+  reportSummary.textContent = "RelatÃ³rio completo de cadastrados com filtros por turma, cargo e comissÃ£o.";
 }
 
 function toggleReportFilters() {
@@ -752,7 +862,7 @@ function formatFileStamp(date) {
 function ensurePdfLibs() {
   const jsPdfConstructor = window?.jspdf?.jsPDF;
   if (typeof jsPdfConstructor !== "function") {
-    throw new Error("Biblioteca de PDF não carregada. Recarregue a página e tente novamente.");
+    throw new Error("Biblioteca de PDF nÃ£o carregada. Recarregue a pÃ¡gina e tente novamente.");
   }
 
   return jsPdfConstructor;
@@ -771,10 +881,10 @@ function createReportDocument(title, subtitle, orientation = "p") {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  doc.text("FÓRUM HUMANIDADES 2026", 12, 11);
+  doc.text("FÃ“RUM HUMANIDADES 2026", 12, 11);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.8);
-  doc.text("Colégios Univap Aquarius", 12, 17);
+  doc.text("ColÃ©gios Univap Aquarius", 12, 17);
 
   doc.setTextColor(11, 31, 71);
   doc.setFont("helvetica", "bold");
@@ -802,13 +912,13 @@ function applyPdfFooter(doc) {
     doc.setFontSize(8);
     doc.setTextColor(120, 130, 150);
     doc.text(stamp, 12, pageHeight - 5);
-    doc.text(`Página ${page} de ${pages}`, pageWidth - 12, pageHeight - 5, { align: "right" });
+    doc.text(`PÃ¡gina ${page} de ${pages}`, pageWidth - 12, pageHeight - 5, { align: "right" });
   }
 }
 
 function getAutoTableConfig(doc) {
   if (typeof doc.autoTable !== "function") {
-    throw new Error("Extensão de tabela PDF não carregada. Recarregue a página e tente novamente.");
+    throw new Error("ExtensÃ£o de tabela PDF nÃ£o carregada. Recarregue a pÃ¡gina e tente novamente.");
   }
 
   return {
@@ -871,7 +981,7 @@ function getReportActiveFiltersLabel() {
   }
 
   if (reportCommissionSelect.value !== "all") {
-    labels.push(`Comissão: ${reportCommissionSelect.value}`);
+    labels.push(`ComissÃ£o: ${reportCommissionSelect.value}`);
   }
 
   return labels.length ? labels.join(" | ") : "Sem filtros (todos os cadastros).";
@@ -883,8 +993,8 @@ function generateRegisteredReportPdf() {
   );
 
   const { doc, startY } = createReportDocument(
-    "Relatório de Cadastrados",
-    "Relação completa de alunos cadastrados com filtros aplicados.",
+    "RelatÃ³rio de Cadastrados",
+    "RelaÃ§Ã£o completa de alunos cadastrados com filtros aplicados.",
     "l"
   );
 
@@ -917,7 +1027,7 @@ function generateRegisteredReportPdf() {
   doc.autoTable({
     ...tableConfig,
     startY: startY + 10,
-    head: [["Aluno", "Turma", "Cargo", "Comissão", "Parceiro", "Data/Hora"]],
+    head: [["Aluno", "Turma", "Cargo", "ComissÃ£o", "Parceiro", "Data/Hora"]],
     body: tableRows,
     columnStyles: {
       0: { cellWidth: 66 },
@@ -949,20 +1059,20 @@ function getNotRegisteredStudents() {
 function generateNotRegisteredReportPdf() {
   const notRegistered = getNotRegisteredStudents();
   const { doc, startY } = createReportDocument(
-    "Relatório de Não Inscritos",
-    "Alunos disponíveis que ainda não estão inscritos em nenhum cargo."
+    "RelatÃ³rio de NÃ£o Inscritos",
+    "Alunos disponÃ­veis que ainda nÃ£o estÃ£o inscritos em nenhum cargo."
   );
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.2);
   doc.setTextColor(52, 69, 102);
-  doc.text(`Total de alunos não inscritos: ${notRegistered.length}`, 12, startY);
+  doc.text(`Total de alunos nÃ£o inscritos: ${notRegistered.length}`, 12, startY);
 
   if (!notRegistered.length) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(11, 31, 71);
-    doc.text("Todos os alunos da lista já estão inscritos.", 12, startY + 11);
+    doc.text("Todos os alunos da lista jÃ¡ estÃ£o inscritos.", 12, startY + 11);
     applyPdfFooter(doc);
     doc.save(`relatorio-nao-inscritos-${formatFileStamp(new Date())}.pdf`);
     return;
@@ -972,8 +1082,8 @@ function generateNotRegisteredReportPdf() {
   doc.autoTable({
     ...tableConfig,
     startY: startY + 4,
-    head: [["Aluno", "Situação"]],
-    body: notRegistered.map((name) => [name, "Não inscrito"]),
+    head: [["Aluno", "SituaÃ§Ã£o"]],
+    body: notRegistered.map((name) => [name, "NÃ£o inscrito"]),
     columnStyles: {
       0: { cellWidth: 140 },
       1: { cellWidth: 58 },
@@ -1023,7 +1133,7 @@ function getPartnerGroups() {
         advisorClassroom: advisor ? advisor.classroom : "-",
         commission: commission || "-",
         timestamp: first.createdAt || first.updatedAt || "",
-        link: deputy && advisor ? `${deputy.studentName} <-> ${advisor.studentName}` : "Vínculo incompleto",
+        link: deputy && advisor ? `${deputy.studentName} <-> ${advisor.studentName}` : "VÃ­nculo incompleto",
       };
     })
     .sort((a, b) =>
@@ -1037,8 +1147,8 @@ function generatePartnersReportPdf() {
   const groups = getPartnerGroups();
 
   const { doc, startY } = createReportDocument(
-    "Relatório de Parceiros",
-    "Duplas Deputado/Assessor, vínculo, comissão e data/hora de cadastro.",
+    "RelatÃ³rio de Parceiros",
+    "Duplas Deputado/Assessor, vÃ­nculo, comissÃ£o e data/hora de cadastro.",
     "l"
   );
 
@@ -1051,7 +1161,7 @@ function generatePartnersReportPdf() {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(11, 31, 71);
-    doc.text("Nenhuma dupla Deputado/Assessor cadastrada até o momento.", 12, startY + 11);
+    doc.text("Nenhuma dupla Deputado/Assessor cadastrada atÃ© o momento.", 12, startY + 11);
     applyPdfFooter(doc);
     doc.save(`relatorio-parceiros-${formatFileStamp(new Date())}.pdf`);
     return;
@@ -1071,7 +1181,7 @@ function generatePartnersReportPdf() {
   doc.autoTable({
     ...tableConfig,
     startY: startY + 5,
-    head: [["Deputado", "Turma Dep.", "Assessor", "Turma Ass.", "Vínculo", "Comissão", "Data/Hora"]],
+    head: [["Deputado", "Turma Dep.", "Assessor", "Turma Ass.", "VÃ­nculo", "ComissÃ£o", "Data/Hora"]],
     body: tableRows,
     columnStyles: {
       0: { cellWidth: 51 },
@@ -1099,7 +1209,7 @@ function generateVacanciesReportPdf() {
     const limit = LIMITED_ROLE_MAX[role];
     const free = limit === null ? "Ilimitadas" : String(Math.max(limit - used, 0));
     const capacity = limit === null ? "Ilimitada" : String(limit);
-    const status = limit === null ? "Disponível" : Number(free) > 0 ? "Disponível" : "Esgotado";
+    const status = limit === null ? "DisponÃ­vel" : Number(free) > 0 ? "DisponÃ­vel" : "Esgotado";
 
     return [role, String(used), capacity, free, status];
   });
@@ -1123,8 +1233,8 @@ function generateVacanciesReportPdf() {
     .map(([commission, count]) => [commission, String(count)]);
 
   const { doc, startY } = createReportDocument(
-    "Relatório de Vagas",
-    "Ocupação por cargo, vagas livres e inscritos por comissão."
+    "RelatÃ³rio de Vagas",
+    "OcupaÃ§Ã£o por cargo, vagas livres e inscritos por comissÃ£o."
   );
 
   const tableConfig = getAutoTableConfig(doc);
@@ -1146,12 +1256,12 @@ function generateVacanciesReportPdf() {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(11, 31, 71);
-  doc.text("Inscritos por comissão", 12, nextY);
+  doc.text("Inscritos por comissÃ£o", 12, nextY);
 
   doc.autoTable({
     ...tableConfig,
     startY: nextY + 3,
-    head: [["Comissão", "Quantidade de inscritos"]],
+    head: [["ComissÃ£o", "Quantidade de inscritos"]],
     body: commissionRows,
     columnStyles: {
       0: { cellWidth: 120 },
@@ -1193,7 +1303,7 @@ async function generateSelectedReport() {
       generateRegisteredReportPdf();
     }
   } catch (error) {
-    openModal("error", "Erro ao gerar relatório", error.message || "Não foi possível gerar o PDF.");
+    openModal("error", "Erro ao gerar relatÃ³rio", error.message || "NÃ£o foi possÃ­vel gerar o PDF.");
   } finally {
     setReportLoading(false);
   }
@@ -1233,13 +1343,13 @@ studentForm.addEventListener("submit", (event) => {
 
   const unavailable = new Set(statusData.registeredStudents.map((name) => normalize(name)));
   if (unavailable.has(normalize(studentName))) {
-    openModal("error", "Aluno indisponível", "Esse aluno já foi cadastrado e não pode ser selecionado novamente.");
+    openModal("error", "Aluno indisponÃ­vel", "Esse aluno jÃ¡ foi cadastrado e nÃ£o pode ser selecionado novamente.");
     return;
   }
 
   const usedEmails = new Set(statusData.registeredEmails.map((value) => normalize(value)));
   if (usedEmails.has(normalize(email))) {
-    openModal("error", "E-mail já cadastrado", "Este e-mail já foi utilizado. Use outro e-mail.");
+    openModal("error", "E-mail jÃ¡ cadastrado", "Este e-mail jÃ¡ foi utilizado. Use outro e-mail.");
     return;
   }
 
@@ -1266,12 +1376,12 @@ changeForm.addEventListener("submit", (event) => {
   );
 
   if (!entry) {
-    openModal("error", "Cadastro não encontrado", "Não foi possível localizar esse aluno nos registros.");
+    openModal("error", "Cadastro nÃ£o encontrado", "NÃ£o foi possÃ­vel localizar esse aluno nos registros.");
     return;
   }
 
   if (normalize(entry.email) !== normalize(email)) {
-    openModal("error", "E-mail divergente", "O e-mail informado não corresponde ao e-mail cadastrado desse aluno.");
+    openModal("error", "E-mail divergente", "O e-mail informado nÃ£o corresponde ao e-mail cadastrado desse aluno.");
     return;
   }
 
@@ -1298,14 +1408,14 @@ roleForm.addEventListener("submit", async (event) => {
   }
 
   if (!currentRegistration || !flowMode) {
-    openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
+    openModal("error", "Fluxo invÃ¡lido", "RefaÃ§a o processo a partir da tela inicial.");
     resetToAccessScreen();
     return;
   }
 
   const role = toCanonical(roleSelect.value);
   if (!role) {
-    openModal("error", "Cargo obrigatório", "Selecione um cargo para continuar.");
+    openModal("error", "Cargo obrigatÃ³rio", "Selecione um cargo para continuar.");
     return;
   }
 
@@ -1316,7 +1426,7 @@ roleForm.addEventListener("submit", async (event) => {
       isSubmitting = true;
       await finalizeRegistration(role, null, null);
     } catch (error) {
-      openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
+      openModal("error", "Erro", error.message || "NÃ£o foi possÃ­vel comunicar com o Supabase.");
     } finally {
       isSubmitting = false;
     }
@@ -1331,15 +1441,15 @@ roleForm.addEventListener("submit", async (event) => {
   setPartnerFieldsLocked(false);
   populatePartnerNames();
 
-  partnerSubtitle.textContent = "Etapa 3: Parceiro e comissão";
+  partnerSubtitle.textContent = "Etapa 3: Parceiro e comissÃ£o";
 
   if (isLockedChange) {
     if (!currentPartner) {
-      openModal("error", "Parceiro não encontrado", "Não existe parceiro vinculado para este cadastro.");
+      openModal("error", "Parceiro nÃ£o encontrado", "NÃ£o existe parceiro vinculado para este cadastro.");
       return;
     }
 
-    partnerSummary.textContent = `${currentRegistration.studentName} e ${currentPartner.studentName} devem permanecer juntos nesta mudança.`;
+    partnerSummary.textContent = `${currentRegistration.studentName} e ${currentPartner.studentName} devem permanecer juntos nesta mudanÃ§a.`;
     partnerClassroomSelect.value = currentPartner.classroom;
     partnerNameSelect.value = currentPartner.studentName;
     partnerEmailInput.value = currentPartner.email;
@@ -1363,14 +1473,14 @@ partnerForm.addEventListener("submit", async (event) => {
   }
 
   if (!currentRegistration || !pendingRole) {
-    openModal("error", "Fluxo inválido", "Refaça o processo a partir da tela inicial.");
+    openModal("error", "Fluxo invÃ¡lido", "RefaÃ§a o processo a partir da tela inicial.");
     resetToAccessScreen();
     return;
   }
 
   const commission = toCanonicalCommission(commissionSelect.value);
   if (!commission) {
-    openModal("error", "Comissão obrigatória", "Selecione a comissão antes de finalizar.");
+    openModal("error", "ComissÃ£o obrigatÃ³ria", "Selecione a comissÃ£o antes de finalizar.");
     return;
   }
 
@@ -1385,12 +1495,12 @@ partnerForm.addEventListener("submit", async (event) => {
 
   if (!isPartnerLocked) {
     if (normalize(partnerName) === normalize(currentRegistration.studentName)) {
-      openModal("error", "Parceiro inválido", "O parceiro deve ser um aluno diferente do cadastro principal.");
+      openModal("error", "Parceiro invÃ¡lido", "O parceiro deve ser um aluno diferente do cadastro principal.");
       return;
     }
 
     if (normalize(partnerEmail) === normalize(currentRegistration.email)) {
-      openModal("error", "Parceiro inválido", "O e-mail do parceiro deve ser diferente do cadastro principal.");
+      openModal("error", "Parceiro invÃ¡lido", "O e-mail do parceiro deve ser diferente do cadastro principal.");
       return;
     }
   }
@@ -1407,7 +1517,7 @@ partnerForm.addEventListener("submit", async (event) => {
       commission
     );
   } catch (error) {
-    openModal("error", "Erro", error.message || "Não foi possível comunicar com o Supabase.");
+    openModal("error", "Erro", error.message || "NÃ£o foi possÃ­vel comunicar com o Supabase.");
   } finally {
     isSubmitting = false;
   }
@@ -1446,7 +1556,23 @@ window.addEventListener("error", (event) => {
 
 setAccessLoading(false);
 modal.classList.add("hidden");
+startRegistrationCountdown();
 switchScreen(accessScreen);
+  updateRegistrationCountdown();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
