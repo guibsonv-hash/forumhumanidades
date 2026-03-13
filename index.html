@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>F&Oacute;RUM HUMANIDADES 2026 - Col&eacute;gios Univap Aquarius</title>
-  <link rel="stylesheet" href="styles.css?v=20260310-4">
+  <link rel="stylesheet" href="styles.css?v=20260313-7">
 </head>
 <body>
   <main class="page">
     <section id="access-screen" class="card">
-      <header class="card-header">
+      <header class="card-header hero-header">
         <h1 class="brand-title">F&Oacute;RUM HUMANIDADES 2026</h1>
         <p class="event-tag">Col&eacute;gios Univap Aquarius</p>
         <p class="subtitle">Inscri&ccedil;&atilde;o de Aluno(a)</p>
+        <img class="hero-figure" src="assets/header-personagens.png" alt="" aria-hidden="true">
       </header>
 
       <form id="access-form" class="form" novalidate>
@@ -569,6 +570,31 @@
         </div>
       </form>
     </section>
+    <section id="registration-countdown" class="countdown-card hidden" aria-live="polite">
+      <p class="countdown-label">Abertura das inscrições</p>
+      <p class="countdown-note">Inscrições temporariamente fechadas</p>
+
+      <div id="registration-countdown-value" class="countdown-grid" role="timer" aria-label="Contagem regressiva para abertura">
+        <div class="countdown-unit">
+          <span id="countdown-days" class="countdown-number">00</span>
+          <span class="countdown-unit-label">Dias</span>
+        </div>
+        <div class="countdown-unit">
+          <span id="countdown-hours" class="countdown-number">00</span>
+          <span class="countdown-unit-label">Horas</span>
+        </div>
+        <div class="countdown-unit">
+          <span id="countdown-minutes" class="countdown-number">00</span>
+          <span class="countdown-unit-label">Minutos</span>
+        </div>
+        <div class="countdown-unit">
+          <span id="countdown-seconds" class="countdown-number">00</span>
+          <span class="countdown-unit-label">Segundos</span>
+        </div>
+      </div>
+
+      <p id="registration-countdown-target" class="countdown-target">Horário de Brasília: 19/03/2026 às 10h00</p>
+    </section>
   </main>
 
   <footer class="page-footer">
@@ -587,9 +613,11 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="config.js?v=20260310-5"></script>
-  <script src="script.js?v=20260310-6"></script>
+  <script src="script.js?v=20260313-3"></script>
 </body>
 </html>
+
+
 
 
 
